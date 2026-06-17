@@ -10,6 +10,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Firebaseの画面から取得した、あなた専用の接続キー
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXjJhUGRAEle2sGayOUUq35t03g0ZV3DQ",
+            authDomain: "obentou-tyumonsystem.firebaseapp.com",
+            projectId: "obentou-tyumonsystem",
+            storageBucket: "obentou-tyumonsystem.firebasestorage.app",
+            messagingSenderId: "137923955913",
+            appId: "1:137923955913:web:f10d4939a9c72209bd5118",
+            measurementId: "G-6D7H94G02E"
+        };
+        
+        // データベースに接続する命令
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const docRef = db.collection("obento_app").doc("weekly_data");
+    </script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
