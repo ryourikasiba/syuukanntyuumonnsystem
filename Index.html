@@ -4,17 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>お弁当注文集計システム - 週間管理</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for icons -->
+    <script src="https://cdn.tailwindcss.com\"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     
     <script>
-        // Firebaseの画面から取得した、あなた専用の接続キー
+        // Firebase構成オブジェクト
         const firebaseConfig = {
             apiKey: "AIzaSyBXjJhUGRAEle2sGayOUUq35t03g0ZV3DQ",
             authDomain: "obentou-tyumonsystem.firebaseapp.com",
@@ -25,7 +22,7 @@
             measurementId: "G-6D7H94G02E"
         };
         
-        // データベースに接続する命令
+        // Firebase初期化とデータベース参照
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const docRef = db.collection("obento_app").doc("weekly_data");
@@ -33,7 +30,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
-    <!-- ヘッダー -->
     <header class="bg-blue-600 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -46,529 +42,272 @@
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <span class="bg-blue-700 px-3 py-1.5 rounded text-xs font-semibold">
-                    <i class="fa-solid fa-clock mr-1"></i>水曜締切ルール適用中
-                </span>
-                <span id="currentDateDisplay" class="text-sm bg-blue-800 px-3 py-1.5 rounded">
-                    <!-- 現在日時を動的に表示 -->
-                </span>
+                <span id="currentDateDisplay" class="bg-blue-700 px-3 py-1.5 rounded-full text-xs font-medium border border-blue-500/30 flex items-center gap-1">
+                    </span>
+                <div class="bg-blue-800 p-1 rounded-xl flex border border-blue-900/50">
+                    <button id="tabBtnOrder" onclick="switchTab('order')" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm">
+                        <i class="fa-solid fa-pen-to-square mr-1"></i> 注文入力
+                    </button>
+                    <button id="tabBtnSummary" onclick="switchTab('summary')" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white">
+                        <i class="fa-solid fa-chart-pie mr-1"></i> 集計確認
+                    </button>
+                    <button id="tabBtnMaster" onclick="switchTab('master')" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white">
+                        <i class="fa-solid fa-sliders mr-1"></i> マスタ管理
+                    </button>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- メインコンテンツ -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-4 lg:p-6 flex flex-col gap-6">
-
-        <!-- ナビゲーションタブ -->
-        <div class="bg-white rounded-xl shadow-sm p-1.5 flex flex-wrap gap-1 border border-slate-200">
-            <button onclick="switchTab('input-tab')" id="btn-input-tab" class="tab-btn flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 shadow-sm border border-blue-200">
-                <i class="fa-solid fa-pen-to-square"></i> 1. 注文入力 (各店舗)
-            </button>
-            <button onclick="switchTab('summary-tab')" id="btn-summary-tab" class="tab-btn flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-chart-pie"></i> 2. 工場集計ダッシュボード
-            </button>
-            <button onclick="switchTab('master-tab')" id="btn-master-tab" class="tab-btn flex-1 min-w-[120px] py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-gears"></i> 3. マスタ管理 (要パスワード)
-            </button>
-        </div>
-
-        <!-- 通知メッセージ領域 -->
-        <div id="toastMessage" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300">
-            <span id="toastIcon" class="text-green-400"><i class="fa-solid fa-circle-check"></i></span>
-            <span id="toastText" class="text-sm">メッセージがここに表示されます</span>
-        </div>
-
-        <!-- 🗑️ カスタム削除確認モーダル（confirmの代わり） -->
-        <div id="customConfirmModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-                <div class="flex items-start gap-4">
-                    <div class="bg-red-50 text-red-600 p-3 rounded-full shrink-0">
-                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                    </div>
-                    <div>
-                        <h3 id="confirmTitle" class="text-lg font-bold text-slate-900">マスタの削除確認</h3>
-                        <p id="confirmMessage" class="text-sm text-slate-500 mt-2">この項目を本当に削除しますか？紐付いている注文データも消去されます。</p>
-                    </div>
-                </div>
-                <div class="flex gap-3 justify-end mt-6">
-                    <button onclick="closeConfirmModal()" class="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
-                        キャンセル
-                    </button>
-                    <button id="confirmExecuteBtn" onclick="executeDeletion()" class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white transition-all shadow-sm">
-                        本当に削除する
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== タブ1: 注文入力 ==================== -->
-        <section id="input-tab" class="tab-content flex flex-col gap-6">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <!-- 設定サイドパネル -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-4">
-                    <h3 class="font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-blue-500"></i> 入力条件設定
-                    </h3>
-                    
-                    <!-- 店舗選択 -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">入力店舗</label>
-                        <select id="inputStoreSelect" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="loadStoreOrder()">
-                            <!-- 動的に生成 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+        
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <label for="weekSelector" class="text-sm font-bold text-slate-600 shrink-0">対象の週を選択:</label>
+                <div class="relative w-full sm:w-72">
+                    <select id="weekSelector" onchange="handleWeekChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-10 shadow-inner text-sm">
                         </select>
-                    </div>
-
-                    <!-- 対象週の指定（過去4週〜未来4週、および全週の2ヶ月超に対応） -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">対象期間（発注週選択）</label>
-                        <select id="targetWeekSelect" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium" onchange="onWeekChange()">
-                            <!-- 動的に生成 -->
-                        </select>
-                        <span id="weekDeadlineNote" class="text-[11px] text-red-500 block mt-1"><i class="fa-solid fa-circle-exclamation mr-0.5"></i> 水曜日に翌週分注文が締め切られます</span>
-                    </div>
-
-                    <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                        <button id="saveOrderBtn" onclick="saveCurrentStoreOrder()" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-sm">
-                            <i class="fa-solid fa-floppy-disk"></i> この店舗の注文を保存
-                        </button>
-                        <button id="resetOrderBtn" onclick="clearCurrentStoreOrder()" class="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-semibold py-2.5 px-4 rounded-lg text-sm transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-trash-can"></i> 入力をリセット
-                        </button>
-                    </div>
-
-                    <!-- 入力ステータスサマリー -->
-                    <div class="mt-4 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                        <h4 class="text-xs font-bold text-slate-700 mb-2 font-mono">現在の入力店舗ステータス</h4>
-                        <div class="flex justify-between text-xs text-slate-600 mb-1">
-                            <span>登録店舗総数:</span>
-                            <span id="statTotalStores" class="font-bold text-slate-900">-</span>
-                        </div>
-                        <div class="flex justify-between text-xs text-slate-600">
-                            <span>選択週 入力済店舗数:</span>
-                            <span id="statFilledStores" class="font-bold text-green-600">-</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 注文フォームメイン -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:col-span-3 relative flex flex-col gap-4 overflow-hidden">
-                    
-                    <!-- 🔒 全週選択時のカバーマスク -->
-                    <div id="allWeekInputMask" class="hidden absolute inset-0 bg-slate-100/95 backdrop-blur-sm z-35 flex flex-col items-center justify-center text-center p-6">
-                        <div class="bg-blue-50 text-blue-600 p-4 rounded-full mb-4">
-                            <i class="fa-solid fa-chart-line text-3xl"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-800">全週累計集計モード中</h3>
-                        <p class="text-sm text-slate-500 mt-2 max-w-md">「全週の累計集計」が選択されている間は、注文の新規入力・編集はできません。新しく発注を登録・修正する場合は、左側のメニューから特定の「〇週分」を選択してください。</p>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                <span id="displayStoreName" class="text-blue-600">店舗名</span> の注文シート
-                            </h2>
-                            <p class="text-xs text-slate-500 mt-0.5">対象期間: <span id="displayWeekRange" class="font-semibold text-slate-700">----/--/-- 〜 ----/--/--</span></p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button id="copyPrevOrderBtn" onclick="copyPreviousWeekOrder()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
-                                <i class="fa-solid fa-copy"></i> 前週の注文をコピー
-                            </button>
-                            <button id="fillDemoBtn" onclick="fillSampleOrder()" class="text-xs text-slate-500 hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg transition-all">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>テスト値を自動入力
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 注文入力グリッドテーブル -->
-                    <div class="overflow-x-auto border border-slate-200 rounded-lg shadow-sm">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
-                                    <th class="p-3 pl-4 min-w-[200px]">お弁当アイテム名</th>
-                                    <th class="p-3 text-center min-w-[80px] bg-red-50 text-red-700">月</th>
-                                    <th class="p-3 text-center min-w-[80px] bg-orange-50 text-orange-700">火</th>
-                                    <th class="p-3 text-center min-w-[80px] bg-yellow-50 text-yellow-700">水</th>
-                                    <th class="p-3 text-center min-w-[80px] bg-green-50 text-green-700">木</th>
-                                    <th class="p-3 text-center min-w-[80px] bg-blue-50 text-blue-700">金</th>
-                                    <th class="p-3 text-center min-w-[90px] bg-slate-200 text-slate-800">店舗合計</th>
-                                </tr>
-                            </thead>
-                            <tbody id="orderInputTableBody">
-                                <!-- JavaScriptで動的に生成 -->
-                            </tbody>
-                            <tfoot class="bg-slate-200 text-slate-900 font-bold border-t-2 border-slate-300 text-sm">
-                                <tr id="orderInputTableFooter">
-                                    <!-- JavaScriptでリアルタイム集計を挿入 -->
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- ==================== タブ2: 工場集計ダッシュボード ==================== -->
-        <section id="summary-tab" class="tab-content hidden flex flex-col gap-6">
-            <!-- 集計サマリーカード -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">選択範囲の注文総数</p>
-                        <h3 id="totalWeeklyOrdersCount" class="text-3xl font-extrabold text-slate-900 mt-1">0 <span class="text-sm font-normal text-slate-500">個</span></h3>
-                    </div>
-                    <div class="bg-blue-50 text-blue-600 p-3 rounded-xl">
-                        <i class="fa-solid fa-boxes-stacked text-xl"></i>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">ピーク曜日</p>
-                        <h3 id="peakDayDisplay" class="text-xl font-extrabold text-slate-900 mt-1">-</h3>
-                    </div>
-                    <div class="bg-red-50 text-red-600 p-3 rounded-xl">
-                        <i class="fa-solid fa-fire text-xl"></i>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">注文入力店舗</p>
-                        <h3 id="filledStoresRatio" class="text-xl font-extrabold text-slate-900 mt-1">0 / 0</h3>
-                    </div>
-                    <div class="bg-green-50 text-green-600 p-3 rounded-xl">
-                        <i class="fa-solid fa-store text-xl"></i>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">お弁当アイテム数</p>
-                        <h3 id="activeItemsCount" class="text-xl font-extrabold text-slate-900 mt-1">0 種</h3>
-                    </div>
-                    <div class="bg-purple-50 text-purple-600 p-3 rounded-xl">
-                        <i class="fa-solid fa-utensils text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- メイン集計ビュー -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-5">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-bar text-blue-600"></i> 製造ライン別・曜日別 注文総集計
-                        </h2>
-                        <p class="text-xs text-slate-500 mt-1">
-                            対象期間: <span id="summaryWeekRange" class="font-semibold text-slate-700">----/--/-- 〜 ----/--/--</span> 
-                            （全店舗から集計されたリアルタイムの合計注文数）
-                        </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all flex items-center gap-2 shadow-sm">
-                            <i class="fa-solid fa-file-excel"></i> Excel用CSVダウンロード
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 集計表示オプション -->
-                <div class="flex flex-wrap gap-2 sm:gap-4 border-b border-slate-100 pb-3">
-                    <button id="btn-view-item-day" onclick="switchSummaryView('item-day')" class="text-sm font-semibold border-b-2 border-blue-600 pb-2 text-blue-600 px-1">
-                        お弁当 × 曜日 集計
-                    </button>
-                    <button id="btn-view-store-item" onclick="switchSummaryView('store-item')" class="text-sm font-medium text-slate-500 hover:text-slate-800 pb-2 border-b-2 border-transparent px-1">
-                        店舗 × お弁当 総数集計
-                    </button>
-                    <button id="btn-view-store-item-day" onclick="switchSummaryView('store-item-day')" class="text-sm font-medium text-slate-500 hover:text-slate-800 pb-2 border-b-2 border-transparent px-1">
-                        店舗 × お弁当 × 曜日 集計
-                    </button>
-                </div>
-
-                <!-- 1. お弁当 × 曜日 集計テーブル -->
-                <div id="view-item-day-container" class="overflow-x-auto border border-slate-200 rounded-lg shadow-sm">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
-                                <th class="p-3 pl-4 min-w-[200px]">お弁当アイテム名</th>
-                                <th class="p-3 text-center min-w-[80px] bg-red-50 text-red-700">月 (個)</th>
-                                <th class="p-3 text-center min-w-[80px] bg-orange-50 text-orange-700">火 (個)</th>
-                                <th class="p-3 text-center min-w-[80px] bg-yellow-50 text-yellow-700">水 (個)</th>
-                                <th class="p-3 text-center min-w-[80px] bg-green-50 text-green-700">木 (個)</th>
-                                <th class="p-3 text-center min-w-[80px] bg-blue-50 text-blue-700">金 (個)</th>
-                                <th class="p-3 text-center min-w-[100px] bg-slate-200 text-slate-800">週間合計</th>
-                            </tr>
-                        </thead>
-                        <tbody id="itemDaySummaryTableBody">
-                            <!-- JavaScriptで動的に生成 -->
-                        </tbody>
-                        <tfoot>
-                            <tr id="itemDaySummaryTableFooter" class="bg-slate-200 text-slate-900 font-bold border-t border-slate-300">
-                                <!-- JavaScriptで動的に生成 -->
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <!-- 2. 店舗 × お弁当 総数集計テーブル (初期非表示) -->
-                <div id="view-store-item-container" class="hidden overflow-x-auto border border-slate-200 rounded-lg shadow-sm">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr id="storeItemSummaryHeader" class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
-                                <!-- JavaScriptで動的に生成 -->
-                            </tr>
-                        </thead>
-                        <tbody id="storeItemSummaryTableBody">
-                            <!-- JavaScriptで動的に生成 -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- 3. 店舗 × お弁当 × 曜日 集計テーブル (初期非表示) -->
-                <div id="view-store-item-day-container" class="hidden flex flex-col gap-3">
-                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <span class="text-xs text-slate-600 font-medium">
-                            <i class="fa-solid fa-filter mr-1"></i> 表示オプション:
-                        </span>
-                        <label class="inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="hideZeroOrderRows" onchange="updateSummaryData()" checked class="sr-only peer">
-                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                            <span class="ms-2 text-xs font-medium text-slate-700">注文のないお弁当行を非表示にする</span>
-                        </label>
-                    </div>
-                    <div class="overflow-x-auto border border-slate-200 rounded-lg shadow-sm">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
-                                    <th class="p-3 pl-4 min-w-[150px]">店舗名</th>
-                                    <th class="p-3 min-w-[180px]">お弁当アイテム名</th>
-                                    <th class="p-3 text-center min-w-[70px] bg-red-50 text-red-700">月</th>
-                                    <th class="p-3 text-center min-w-[70px] bg-orange-50 text-orange-700">火</th>
-                                    <th class="p-3 text-center min-w-[70px] bg-yellow-50 text-yellow-700">水</th>
-                                    <th class="p-3 text-center min-w-[70px] bg-green-50 text-green-700">木</th>
-                                    <th class="p-3 text-center min-w-[70px] bg-blue-50 text-blue-700">金</th>
-                                    <th class="p-3 text-center min-w-[90px] bg-slate-200 text-slate-800">週間合計</th>
-                                </tr>
-                            </thead>
-                            <tbody id="storeItemDaySummaryTableBody">
-                                <!-- JavaScriptで動的に生成 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ==================== タブ3: マスタ管理 (セキュリティロック対応) ==================== -->
-        <section id="master-tab" class="tab-content hidden flex flex-col gap-6">
             
-            <!-- 🔑 パスワードロック画面（ロック時のみ表示） -->
-            <div id="masterLockScreen" class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-md mx-auto w-full text-center my-6">
-                <div class="bg-blue-50 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-lock text-3xl"></i>
+            <div id="inputStatusSection" class="flex flex-wrap items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100 w-full md:w-auto">
+                <div class="text-xs font-bold text-slate-500 px-2">入力ステータス:</div>
+                <div class="flex items-center gap-4 text-xs font-semibold">
+                    <span class="flex items-center gap-1 text-slate-500">
+                        <span id="statUninput" class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-bold">0</span> 未入力
+                    </span>
+                    <span class="flex items-center gap-1 text-amber-600">
+                        <span id="statSaving" class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold">0</span> 下書き保存
+                    </span>
+                    <span class="flex items-center gap-1 text-green-600">
+                        <span id="statSubmitted" class="bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-bold">0</span> 入力完了
+                    </span>
                 </div>
-                <h2 class="text-xl font-bold text-slate-800 mb-2">管理者認証</h2>
-                <p class="text-sm text-slate-500 mb-6">マスタデータの変更（お弁当や店舗の追加・編集）を行うには管理者パスワードを入力してください。</p>
-                
-                <form onsubmit="unlockMaster(event)" class="flex flex-col gap-4">
-                    <div>
-                        <input type="password" id="masterPasswordInput" placeholder="管理者パスワードを入力" required class="w-full text-center bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white tracking-widest">
-                        <span class="text-xs text-slate-400 block mt-2">※ 初期パスワード: <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">8888</span></span>
-                    </div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-lock-open"></i> ロック解除
-                    </button>
-                </form>
             </div>
+        </div>
 
-            <!-- 🔓 本来のマスタ管理コントロール（ロック解除時のみ表示） -->
-            <div id="masterMainContent" class="hidden flex flex-col gap-6">
-                <!-- マスタ画面用ヘッダーパネル -->
-                <div class="bg-slate-900 text-white rounded-xl shadow-sm p-4 px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div id="panelOrder" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-3">
                     <div class="flex items-center gap-3">
-                        <div class="text-emerald-400 text-xl"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div class="bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-shop"></i>
+                        </div>
                         <div>
-                            <h3 class="font-bold text-sm sm:text-base">管理者認証済み（マスタ編集可能）</h3>
-                            <p class="text-slate-400 text-xs">設定変更後は、安全のためにログアウト（再ロック）してください。</p>
+                            <h2 class="font-bold text-slate-800">店舗を選択して注文を入力</h2>
+                            <p class="text-xs text-slate-400">担当する店舗を選んで各曜日の注文数を入力してください</p>
                         </div>
                     </div>
-                    <div class="flex gap-2 w-full sm:w-auto">
-                        <button onclick="lockMaster()" class="w-full sm:w-auto bg-slate-750 hover:bg-slate-700 text-white border border-slate-600 font-semibold py-2 px-4 rounded-lg text-xs transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-lock"></i> マスタ管理を施錠する
-                        </button>
-                    </div>
-                </div>
-
-                <!-- マスタグリッド (お弁当と店舗) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- お弁当マスタ管理 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-4">
-                        <div class="border-b pb-3 flex justify-between items-center">
-                            <div>
-                                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <i class="fa-solid fa-utensils text-orange-500"></i> お弁当アイテム登録管理
-                                </h2>
-                                <p class="text-xs text-slate-500 mt-0.5">製造するお弁当の商品リストを管理します</p>
-                            </div>
-                            <span id="badgeItemCount" class="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-full">--点</span>
-                        </div>
-
-                        <!-- お弁当新規追加フォーム -->
-                        <form id="itemAddForm" onsubmit="addNewItem(event)" class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex gap-2">
-                            <input type="text" id="newItemName" placeholder="例: 鮭弁当、唐揚げ弁当..." required class="flex-grow bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all whitespace-nowrap">
-                                <i class="fa-solid fa-plus mr-1"></i>追加
-                            </button>
-                        </form>
-
-                        <!-- お弁当リストテーブル -->
-                        <div class="overflow-y-auto max-h-[300px] border border-slate-200 rounded-lg">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-200">
-                                        <th class="p-3 pl-4 w-24">商品ID</th>
-                                        <th class="p-3">お弁当名</th>
-                                        <th class="p-3 text-right w-16">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemMasterTableBody">
-                                    <!-- JavaScriptで動的に生成 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- 店舗マスタ管理 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-4">
-                        <div class="border-b pb-3 flex justify-between items-center">
-                            <div>
-                                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <i class="fa-solid fa-store text-emerald-500"></i> 発注店舗登録管理
-                                </h2>
-                                <p class="text-xs text-slate-500 mt-0.5">注文を行う店舗リストを管理します</p>
-                            </div>
-                            <span id="badgeStoreCount" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full">--店舗</span>
-                        </div>
-
-                        <!-- 店舗新規追加フォーム -->
-                        <form id="storeAddForm" onsubmit="addNewStore(event)" class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex gap-2">
-                            <input type="text" id="newStoreName" placeholder="例: 新宿店、渋谷第一店..." required class="flex-grow bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all whitespace-nowrap">
-                                <i class="fa-solid fa-plus mr-1"></i>追加
-                            </button>
-                        </form>
-
-                        <!-- 店舗リストテーブル -->
-                        <div class="overflow-y-auto max-h-[300px] border border-slate-200 rounded-lg">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-200">
-                                        <th class="p-3 pl-4 w-24">店舗ID</th>
-                                        <th class="p-3">店舗名</th>
-                                        <th class="p-3 text-right w-16">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="storeMasterTableBody">
-                                    <!-- JavaScriptで動的に生成 -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="w-full sm:w-64">
+                        <select id="storeSelector" onchange="handleStoreChange()" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-10 shadow-sm">
+                            </select>
                     </div>
                 </div>
 
-                <!-- ⚙️ パスワード変更パネル -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 max-w-xl">
-                    <h3 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-key text-yellow-500"></i> 管理者パスワードの変更
-                    </h3>
-                    <form onsubmit="changeAdminPassword(event)" class="flex flex-col sm:flex-row gap-3 items-end">
-                        <div class="flex-1 w-full">
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">現在のパスワード</label>
-                            <input type="password" id="currentPassInput" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div class="flex-1 w-full">
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">新しいパスワード</label>
-                            <input type="password" id="newPassInput" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all whitespace-nowrap h-[38px] w-full sm:w-auto">
-                            パスワード変更を保存
-                        </button>
-                    </form>
+                <div id="orderFormContainer" class="p-6">
+                    </div>
+            </div>
+        </div>
+
+        <div id="panelSummary" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <label for="filterStore" class="text-xs font-bold text-slate-500">店舗絞り込み:</label>
+                    <select id="filterStore" onchange="updateSummaryData()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="filterDay" class="text-xs font-bold text-slate-500">曜日絞り込み:</label>
+                    <select id="filterDay" onchange="updateSummaryData()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="all">全曜日（月〜金）</option>
+                        <option value="月">月曜日</option>
+                        <option value="火">火曜日</option>
+                        <option value="水">水曜日</option>
+                        <option value="木">木曜日</option>
+                        <option value="金">金曜日</option>
+                    </select>
                 </div>
             </div>
 
-        </section>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                    <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-kitchen-set text-slate-500"></i>
+                            <h3 class="font-bold text-slate-800 text-sm">商品別 製造集計（発注合計）</h3>
+                        </div>
+                        <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all">
+                            <i class="fa-solid fa-file-csv"></i> CSV出力
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
+                                    <th class="p-3 pl-5">商品名</th>
+                                    <th class="p-3 text-right">単価</th>
+                                    <th class="p-3 text-center bg-blue-50/50 text-blue-700">合計数量</th>
+                                    <th class="p-3 text-right pr-5">合計金額</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryItemTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                    <div class="bg-slate-50 px-5 py-4 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-rectangle-list text-slate-500"></i>
+                            <h3 class="font-bold text-slate-800 text-sm">店舗別 入力状況＆金額一覧</h3>
+                        </div>
+                    </div>
+                    <div class="overflow-y-auto flex-1 max-h-[500px]">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100 sticky top-0 bg-slate-50 z-10">
+                                    <th class="p-3 pl-5">店舗名</th>
+                                    <th class="p-3 text-center">状態</th>
+                                    <th class="p-3 text-right pr-5">金額合計</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryStoreTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelMaster" class="hidden space-y-6">
+            <div id="masterPasswordLock" class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 max-w-md mx-auto text-center space-y-4">
+                <div class="bg-slate-100 text-slate-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800">マスタ管理認証</h3>
+                    <p class="text-xs text-slate-400 mt-1">設定を変更するにはマスターパスワードを入力してください</p>
+                </div>
+                <div class="space-y-2">
+                    <input type="password" id="inputMasterPassword" placeholder="パスワードを入力" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center text-slate-800 font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button onclick="verifyMasterPassword()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-sm transition-all">
+                        認証する
+                    </button>
+                </div>
+            </div>
+
+            <div id="masterConfigContent" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-amber-50/40 border-amber-100">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-xs font-bold">管理者用安全設定</div>
+                        <p class="text-xs text-slate-500 font-medium">マスターパスワードの変更や、運用週データの完全初期化が行えます。</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeMasterPasswordPrompt()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-lg transition-all">
+                            パスワード変更
+                        </button>
+                        <button onclick="clearAllSystemData()" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold px-3 py-2 rounded-lg transition-all border border-red-200/40">
+                            全データ初期化
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-box text-slate-500"></i>
+                                <h3 class="font-bold text-slate-800 text-sm">商品（お弁当）一覧マスタ</h3>
+                            </div>
+                            <button onclick="addNewItemPrompt()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all">
+                                <i class="fa-solid fa-plus"></i> 新規商品
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
+                                        <th class="p-3 pl-5">商品コード / 商品名</th>
+                                        <th class="p-3 text-right">単価</th>
+                                        <th class="p-3 text-center pr-5 w-24">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="masterItemTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-store text-slate-500"></i>
+                                <h3 class="font-bold text-slate-800 text-sm">登録店舗一覧マスタ</h3>
+                            </div>
+                            <button onclick="addNewStorePrompt()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all">
+                                <i class="fa-solid fa-plus"></i> 新規店舗
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
+                                        <th class="p-3 pl-5">店舗コード / 店舗名</th>
+                                        <th class="p-3 text-center pr-5 w-24">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="masterStoreTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
-    <!-- フッター -->
-    <footer class="bg-slate-800 text-slate-400 py-6 border-t border-slate-700 mt-12 text-xs">
-        <div class="max-w-7xl mx-auto px-4 text-center flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p>© 2026 お弁当製造工場 注文管理システム. All rights reserved.</p>
-            <div class="flex gap-4">
-                <span class="text-slate-500">データの保存先: ブラウザのセキュアな領域（LocalStorage）に永続保存中</span>
-            </div>
-        </div>
+    <footer class="bg-slate-800 text-slate-400 text-center py-4 text-xs border-t border-slate-700 mt-10">
+        <p>© 週間お弁当注文集計システム - クラウド同期版</p>
     </footer>
 
-    <!-- システム制御用のJavaScript -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 hidden transition-all duration-300 transform translate-y-2 opacity-0">
+        <div id="toastIcon"></div>
+        <p id="toastText" class="text-sm font-bold"></p>
+    </div>
+
     <script>
-        // ==================== 1. 初期化・データ定義 ====================
-
-        // 初期お弁当マスタ
+        // 初期基本マスタ（クラウドにデータがない場合の初期モデル）
         let obentoItems = [
-            { id: "ITEM-001", name: "鮭弁当" },
-            { id: "ITEM-002", name: "海苔弁当" },
-            { id: "ITEM-003", name: "唐揚げ弁当" },
-            { id: "ITEM-004", name: "ハンバーグ弁当" },
-            { id: "ITEM-005", name: "幕の内弁当" },
-            { id: "ITEM-006", name: "生姜焼き弁当" },
-            { id: "ITEM-007", name: "チキン南蛮弁当" },
-            { id: "ITEM-008", name: "カツカレー弁当" },
+            { id: "ITEM001", name: "からあげ弁当", price: 450 },
+            { id: "ITEM002", name: "ハンバーグ弁当", price: 500 },
+            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480 },
+            { id: "ITEM004", name: "生姜焼き弁当", price: 520 },
+            { id: "ITEM005", name: "日替わりA弁当", price: 420 }
         ];
 
-        // 初期店舗マスタ (10店舗想定)
         let stores = [
-            { id: "STORE-01", name: "新宿駅前店" },
-            { id: "STORE-02", name: "渋谷道玄坂店" },
-            { id: "STORE-03", name: "池袋東口店" },
-            { id: "STORE-04", name: "秋葉原中央通店" },
-            { id: "STORE-05", name: "新橋レンガ通店" },
-            { id: "STORE-06", name: "上野御徒町店" },
-            { id: "STORE-07", name: "品川高輪口店" },
-            { id: "STORE-08", name: "横浜みなとみらい店" },
-            { id: "STORE-09", name: "大宮西口店" },
-            { id: "STORE-10", name: "千葉駅前店" }
+            { id: "STORE001", name: "丸の内本店" },
+            { id: "STORE002", name: "渋谷道玄坂店" },
+            { id: "STORE003", name: "新宿西口店" },
+            { id: "STORE004", name: "池袋東口店" },
+            { id: "STORE005", name: "横浜みなとみらい店" }
         ];
 
-        // 各種曜日定義
-        const daysOfWeek = ['mon', 'tue', 'wed', 'thu', 'fri'];
-        const dayLabels = { mon: '月', tue: '火', wed: '水', thu: '木', fri: '金' };
-
-        // 注文データ保持構造
-        // 構造: orders[weekKey][storeId][itemId] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 }
+        // 注文データ構造: { "2023-W45": { "STORE001": { "月": { "ITEM001": 5, ... }, status: "submitted" } } }
         let orders = {};
+        let masterPassword = "admin"; // デフォルトパスワード
 
-        // アプリケーション内の状態管理
-        let currentWeekKey = ""; // 現在選択されている対象週のキー "YYYY-Wxx" または "ALL"
-        let currentStoreId = ""; // 現在選択されている店舗ID
+        let selectedWeek = "";
+        let selectedStore = "";
+        let isMasterAuthenticated = false;
 
-        // 🔐 マスタ管理のセキュリティ情報
-        let isMasterUnlocked = false; // 現在ロックが解除されているか
-        let masterPassword = "8888"; // 初期の管理者パスワード
+        // ==================== 💾 クラウド（Firebase）保存・自動同期処理 ====================
 
-        // 🗑️ 削除予定データを一時保存する変数（カスタムモーダル用）
-        let pendingDeletion = {
-            type: null, // 'store' または 'item'
-            id: null    // 対象ID
-        };
-
-        // 💾 ローカルストレージキー（データの永続保存用）
-        const STORAGE_KEY_ITEMS = "obento_master_items_v2";
-        const STORAGE_KEY_STORES = "obento_master_stores_v2";
-        const STORAGE_KEY_ORDERS = "obento_orders_v2";
-        const STORAGE_KEY_PASSWORD = "obento_master_password_v2";
-
-        // ==================== 💾 データ保存・読み込み処理 ====================
-
-        // localStorageからデータを読み込み
- // ==================== 💾 クラウド（Firebase）保存・自動同期処理 ====================
-// クラウド（Firebase）へデータを丸ごと書き込み
         function saveDataToStorage() {
             try {
                 docRef.set({
@@ -591,7 +330,6 @@
             }
         }
 
-        // クラウド（Firebase）からデータをリアルタイムに自動同期（読み込み）
         function initFirebaseSync() {
             try {
                 docRef.onSnapshot((doc) => {
@@ -620,1264 +358,584 @@
                 console.error("データ同期の初期化エラー:", e);
             }
         }
-        // ==================== 2. 日付・週のユーティリティ ====================
 
-        // 日付から週番号と月曜・金曜の日付を取得する関数
-        function getWeekDetails(date) {
-            const d = new Date(date);
-            d.setHours(0,0,0,0);
-            // 木曜日を基準にして週を数える (ISO 8601規格準拠)
-            d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-            const yearStart = new Date(d.getFullYear(), 0, 1);
-            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            const weekKey = `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+        // ==================== 🛠️ 画面制御・ユーティリティ ====================
 
-            // 月曜日の日付を算出
-            const monday = new Date(d);
-            monday.setDate(d.getDate() - 3);
-            
-            // 金曜日の日付を算出
-            const friday = new Date(monday);
-            friday.setDate(monday.getDate() + 4);
+        function switchTab(tabName) {
+            document.getElementById('panelOrder').classList.add('hidden');
+            document.getElementById('panelSummary').classList.add('hidden');
+            document.getElementById('panelMaster').classList.add('hidden');
 
-            return {
-                weekKey: weekKey,
-                mondayStr: `${monday.getMonth() + 1}/${monday.getDate()}`,
-                fridayStr: `${friday.getMonth() + 1}/${friday.getDate()}`,
-                fullMonday: monday,
-                fullFriday: friday
-            };
+            document.getElementById('tabBtnOrder').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
+            document.getElementById('tabBtnSummary').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
+            document.getElementById('tabBtnMaster').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
+
+            if (tabName === 'order') {
+                document.getElementById('panelOrder').classList.remove('hidden');
+                document.getElementById('tabBtnOrder').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm";
+            } else if (tabName === 'summary') {
+                document.getElementById('panelSummary').classList.remove('hidden');
+                document.getElementById('tabBtnSummary').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm";
+                updateSummaryData();
+            } else if (tabName === 'master') {
+                document.getElementById('panelMaster').classList.remove('hidden');
+                document.getElementById('tabBtnMaster').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm";
+                if (isMasterAuthenticated) {
+                    document.getElementById('masterPasswordLock').classList.add('hidden');
+                    document.getElementById('masterConfigContent').classList.remove('hidden');
+                    renderMasterTables();
+                } else {
+                    document.getElementById('masterPasswordLock').classList.remove('hidden');
+                    document.getElementById('masterConfigContent').classList.add('hidden');
+                }
+            }
         }
 
-        // 週セレクトボックスの生成 (過去4週〜未来4週の計9週間、約2ヶ月分 + 全週累計)
         function initWeekSelector() {
-            const select = document.getElementById('targetWeekSelect');
-            select.innerHTML = '';
-            
-            const today = new Date();
-            
-            // 🌟 1. 「全週の合計集計」という選択肢を先頭に追加
-            const allOpt = document.createElement('option');
-            allOpt.value = "ALL";
-            allOpt.dataset.range = "全登録週（累計集計モード）";
-            allOpt.textContent = "📊 全週の累計集計 (全データ合算)";
-            select.appendChild(allOpt);
+            const selector = document.getElementById('weekSelector');
+            selector.innerHTML = '';
 
-            // 🌟 2. 過去4週から未来4週まで（計9週間分＝約2ヶ月分）を展開
-            for (let i = -4; i <= 4; i++) {
-                const targetDate = new Date(today);
-                targetDate.setDate(today.getDate() + (7 * i));
-                const weekInfo = getWeekDetails(targetDate);
+            const today = new Date();
+            let currentWed = new Date(today);
+            
+            const currentDay = today.getDay();
+            const daysToWednesday = (3 - currentDay + 7) % 7;
+            currentWed.setDate(today.getDate() + daysToWednesday);
+
+            for (let i = -2; i < 6; i++) {
+                let targetWed = new Date(currentWed);
+                targetWed.setDate(currentWed.getDate() + (i * 7));
+
+                let nextMon = new Date(targetWed);
+                nextMon.setDate(targetWed.getDate() + 5);
+                let nextFri = new Date(targetWed);
+                nextFri.setDate(targetWed.getDate() + 9);
+
+                const weekVal = `${targetWed.getFullYear()}-W${getWeekNumber(targetWed)}`;
                 
-                let label = "";
-                if (i === -4) {
-                    label = `4週前分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr}) [履歴]`;
-                } else if (i === -3) {
-                    label = `3週前分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr}) [履歴]`;
-                } else if (i === -2) {
-                    label = `前々週分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr}) [履歴]`;
-                } else if (i === -1) {
-                    label = `先週分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr}) [履歴]`;
-                } else if (i === 0) {
-                    label = `今週分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr}) [製造中]`;
-                } else if (i === 1) {
-                    label = `翌週分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr}) [水曜締切・入力対象]`;
-                } else if (i === 2) {
-                    label = `翌々週分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr})`;
-                } else if (i === 3) {
-                    label = `3週後分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr})`;
-                } else if (i === 4) {
-                    label = `4週後分 (${weekInfo.mondayStr}〜${weekInfo.fridayStr})`;
-                }
+                const labelMon = `${nextMon.getMonth()+1}/${nextMon.getDate()}`;
+                const labelFri = `${nextFri.getMonth()+1}/${nextFri.getDate()}`;
+                const wedLabel = `${targetWed.getMonth()+1}/${targetWed.getDate()}`;
+                
+                let text = `【翌週製造】${labelMon}(月)〜${labelFri}(金) ［締切:${wedLabel}(水)］`;
+                if (i === 0) text += " ★今週締切分";
 
                 const option = document.createElement('option');
-                option.value = weekInfo.weekKey;
-                option.dataset.range = `${weekInfo.fullMonday.getFullYear()}/${weekInfo.mondayStr} 〜 ${weekInfo.fullFriday.getFullYear()}/${weekInfo.fridayStr}`;
-                option.textContent = label;
-                select.appendChild(option);
+                option.value = weekVal;
+                option.textContent = text;
+                selector.appendChild(option);
+                
+                if (i === 0) selectedWeek = weekVal;
             }
-            
-            // デフォルトは翌週分（リスト上ではインデックス6に相当：全週[0] + -4[1] + -3[2] + -2[3] + -1[4] + 0[5] + 1[6]）
-            select.selectedIndex = 6;
-            currentWeekKey = select.value;
-            updateWeekDisplay();
-        }
-
-        function updateWeekDisplay() {
-            const select = document.getElementById('targetWeekSelect');
-            const selectedOption = select.options[select.selectedIndex];
-            const rangeStr = selectedOption ? selectedOption.dataset.range : "----/--/-- 〜 ----/--/--";
-            
-            document.getElementById('displayWeekRange').textContent = rangeStr;
-            document.getElementById('summaryWeekRange').textContent = rangeStr;
-
-            // 全週選択時は入力マスクを表示してフォームをロック
-            const mask = document.getElementById('allWeekInputMask');
-            const saveBtn = document.getElementById('saveOrderBtn');
-            const resetBtn = document.getElementById('resetOrderBtn');
-            const copyBtn = document.getElementById('copyPrevOrderBtn');
-            const demoBtn = document.getElementById('fillDemoBtn');
-
-            if (currentWeekKey === 'ALL') {
-                mask.classList.remove('hidden');
-                saveBtn.disabled = true;
-                resetBtn.disabled = true;
-                copyBtn.disabled = true;
-                demoBtn.disabled = true;
-                document.getElementById('weekDeadlineNote').className = "text-[11px] text-blue-600 block mt-1";
-                document.getElementById('weekDeadlineNote').innerHTML = `<i class="fa-solid fa-chart-line"></i> 全期間合算のデータ閲覧モードです`;
-            } else {
-                mask.classList.add('hidden');
-                saveBtn.disabled = false;
-                resetBtn.disabled = false;
-                copyBtn.disabled = false;
-                demoBtn.disabled = false;
-                document.getElementById('weekDeadlineNote').className = "text-[11px] text-red-500 block mt-1";
-                document.getElementById('weekDeadlineNote').innerHTML = `<i class="fa-solid fa-circle-exclamation mr-0.5"></i> 水曜日に翌週分注文が締め切られます`;
+            if (!selectedWeek && selector.options.length > 0) {
+                selectedWeek = selector.options[0].value;
             }
         }
 
-        function onWeekChange() {
-            const select = document.getElementById('targetWeekSelect');
-            currentWeekKey = select.value;
-            updateWeekDisplay();
-            
-            if (currentWeekKey !== 'ALL') {
-                loadStoreOrder(); // 個別週の場合は該当週のデータをロード
-            }
-            updateSummaryData();
-            updateInputStatusStats();
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return weekNo;
         }
 
-        // ==================== 3. 画面描画ロジック ====================
-
-        // 初回起動時のデモデータ自動セット（LocalStorageが空の場合のみ、各店舗分のダミーデータを生成する）
-        function setupDemoDataIfEmpty() {
-            // すでに注文データがある場合はデモデータを生成しない
-            if (Object.keys(orders).length > 0) return;
-
-            // 過去・今週・来週にデモデータを自動展開
-            const select = document.getElementById('targetWeekSelect');
-            const targetWeeks = [
-                select.options[5].value, // 今週
-                select.options[6].value  // 翌週
-            ];
-
-            targetWeeks.forEach(weekKey => {
-                orders[weekKey] = {};
-                stores.forEach((store) => {
-                    orders[weekKey][store.id] = {};
-                    obentoItems.forEach((item) => {
-                        const rand = Math.random();
-                        if (rand > 0.3) {
-                            orders[weekKey][store.id][item.id] = {
-                                mon: Math.floor(Math.random() * 4),
-                                tue: Math.floor(Math.random() * 5),
-                                wed: Math.floor(Math.random() * 4),
-                                thu: Math.floor(Math.random() * 5),
-                                fri: Math.floor(Math.random() * 7)
-                            };
-                        } else {
-                            orders[weekKey][store.id][item.id] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-                        }
-                    });
-                });
-            });
-
-            // データをLocalStorageにもすぐに反映
-            saveDataToStorage();
-        }
-
-     // アプリ起動時の表示
-        window.onload = function() {
-            const now = new Date();
-            const days = ['日', '月', '火', '水', '木', '金', '土'];
-            document.getElementById('currentDateDisplay').innerHTML = `
-                <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
-            `;
-
-            initWeekSelector();       // 週の組み立て
-            initFirebaseSync();       // 🌟クラウド自動同期スタート
-        };
-            
-            renderStoreSelector();
+        function handleWeekChange() {
+            selectedWeek = document.getElementById('weekSelector').value;
             renderOrderInputForm();
-            renderMasterTables();
             updateSummaryData();
             updateInputStatusStats();
-        };
-
-        // タブ切り替え制御
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
-
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-50', 'text-blue-700', 'shadow-sm', 'border-blue-200');
-                btn.classList.add('text-slate-600', 'hover:bg-slate-50');
-            });
-
-            const activeBtn = document.getElementById(`btn-${tabId}`);
-            activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-50');
-            activeBtn.classList.add('bg-blue-50', 'text-blue-700', 'shadow-sm', 'border-blue-200');
-
-            // 各種タブ特有のアクション
-            if (tabId === 'summary-tab') {
-                updateSummaryData();
-            } else if (tabId === 'master-tab') {
-                updateMasterTabVisibility();
-            }
         }
-
-        // ==================== 🔑 管理者認証 (ロック/解除) ロジック ====================
-
-        function updateMasterTabVisibility() {
-            const lockScreen = document.getElementById('masterLockScreen');
-            const mainContent = document.getElementById('masterMainContent');
-            const passwordInput = document.getElementById('masterPasswordInput');
-
-            if (isMasterUnlocked) {
-                lockScreen.classList.add('hidden');
-                mainContent.classList.remove('hidden');
-            } else {
-                lockScreen.classList.remove('hidden');
-                mainContent.classList.add('hidden');
-                passwordInput.value = ''; // パスワードクリア
-                passwordInput.focus();
-            }
-        }
-
-        function unlockMaster(event) {
-            event.preventDefault();
-            const passwordInput = document.getElementById('masterPasswordInput');
-            const enteredPassword = passwordInput.value;
-
-            if (enteredPassword === masterPassword) {
-                isMasterUnlocked = true;
-                updateMasterTabVisibility();
-                showToast("ロックを解除しました。マスタデータの編集が可能です。", 'success');
-            } else {
-                showToast("パスワードが違います。もう一度入力してください。", 'error');
-                passwordInput.select();
-                passwordInput.focus();
-            }
-        }
-
-        function lockMaster() {
-            isMasterUnlocked = false;
-            updateMasterTabVisibility();
-            showToast("マスタ管理画面を再ロックしました。", 'info');
-        }
-
-        function changeAdminPassword(event) {
-            event.preventDefault();
-            const currentPass = document.getElementById('currentPassInput');
-            const newPass = document.getElementById('newPassInput');
-
-            if (currentPass.value !== masterPassword) {
-                showToast("現在のパスワードが正しくありません。", 'error');
-                currentPass.select();
-                currentPass.focus();
-                return;
-            }
-
-            if (newPass.value.trim() === "") {
-                showToast("新しいパスワードを空文字にすることはできません。", 'error');
-                newPass.focus();
-                return;
-            }
-
-            masterPassword = newPass.value;
-            currentPass.value = '';
-            newPass.value = '';
-            saveDataToStorage();
-            showToast("管理者パスワードを新しく更新しました！", 'success');
-        }
-
-        // ==================== 3. 画面描画ロジックの続き ====================
 
         function renderStoreSelector() {
-            const select = document.getElementById('inputStoreSelect');
-            select.innerHTML = '';
-            
-            stores.forEach(store => {
+            const selector = document.getElementById('storeSelector');
+            const prevSelected = selector.value;
+            selector.innerHTML = '';
+
+            stores.forEach(st => {
                 const opt = document.createElement('option');
-                opt.value = store.id;
-                opt.textContent = store.name;
-                select.appendChild(opt);
+                opt.value = st.id;
+                opt.textContent = st.name;
+                selector.appendChild(opt);
             });
 
-            if (stores.length > 0) {
-                currentStoreId = stores[0].id;
-                document.getElementById('displayStoreName').textContent = stores[0].name;
+            if (stores.some(s => s.id === prevSelected)) {
+                selector.value = prevSelected;
+            }
+            selectedStore = selector.value;
+        }
+
+        function updateStoreFilterOptions() {
+            const filter = document.getElementById('filterStore');
+            const prevVal = filter.value;
+            filter.innerHTML = '<option value="all">すべての店舗</option>';
+            stores.forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st.id;
+                opt.textContent = st.name;
+                filter.appendChild(opt);
+            });
+            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
+                filter.value = prevVal;
             }
         }
+
+        function handleStoreChange() {
+            selectedStore = document.getElementById('storeSelector').value;
+            renderOrderInputForm();
+        }
+
+        // ==================== 📝 注文フォーム組み立て・保存系 ====================
 
         function renderOrderInputForm() {
-            const tbody = document.getElementById('orderInputTableBody');
-            tbody.innerHTML = '';
+            const container = document.getElementById('orderFormContainer');
+            container.innerHTML = '';
 
-            if (obentoItems.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="p-8 text-center text-slate-400">
-                            <i class="fa-solid fa-circle-info text-2xl mb-2 block"></i>
-                            お弁当アイテムが登録されていません。「マスタ管理」タブより追加してください。
-                        </td>
-                    </tr>
-                `;
+            if (!selectedWeek || !selectedStore) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 店舗マスタ、または運用スケジュールが展開されていません。</div>`;
                 return;
             }
 
-            obentoItems.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150 text-sm";
-                tr.dataset.itemId = item.id;
+            if (!orders[selectedWeek]) orders[selectedWeek] = {};
+            if (!orders[selectedWeek][selectedStore]) {
+                orders[selectedWeek][selectedStore] = { status: "uninput" };
+            }
 
-                tdName = document.createElement('td');
-                tdName.className = "p-3 pl-4 font-semibold text-slate-700";
-                tdName.textContent = item.name;
-                tr.appendChild(tdName);
+            const currentStoreData = orders[selectedWeek][selectedStore];
+            const isSubmitted = currentStoreData.status === 'submitted';
 
-                daysOfWeek.forEach(day => {
-                    const tdDay = document.createElement('td');
-                    tdDay.className = "p-2 text-center";
-                    
-                    const inputDiv = document.createElement('div');
-                    inputDiv.className = "flex items-center justify-center gap-1 mx-auto max-w-[110px]";
-                    
-                    const btnMinus = document.createElement('button');
-                    btnMinus.type = "button";
-                    btnMinus.className = "w-7 h-7 bg-slate-100 rounded flex items-center justify-center text-xs hover:bg-slate-200 transition-colors font-bold text-slate-600";
-                    btnMinus.innerHTML = `<i class="fa-solid fa-minus"></i>`;
-                    btnMinus.onclick = () => adjustValue(item.id, day, -1);
+            let html = `
+                <div class="mb-4 flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500">現在のステータス:</span>
+                        ${getStatusBadgeHTML(currentStoreData.status)}
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveOrderData(false)" ${isSubmitted ? 'disabled' : ''} class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-all">
+                            <i class="fa-solid fa-floppy-disk"></i> 一時保存(下書き)
+                        </button>
+                        <button onclick="saveOrderData(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-all">
+                            <i class="fa-solid fa-circle-check"></i> 入力完了(確定)
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-100">
+                    <table class="w-full text-left text-sm border-collapse min-w-[600px]">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold">
+                                <th class="p-3 pl-4 w-48">商品名 / 単価</th>
+                                <th class="p-3 text-center bg-red-50/20 text-red-900/70">月曜日</th>
+                                <th class="p-3 text-center bg-amber-50/20 text-amber-900/70">火曜日</th>
+                                <th class="p-3 text-center bg-green-50/20 text-green-900/70">水曜日</th>
+                                <th class="p-3 text-center bg-blue-50/20 text-blue-900/70">木曜日</th>
+                                <th class="p-3 text-center bg-purple-50/20 text-purple-900/70">金曜日</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+            `;
 
-                    const input = document.createElement('input');
-                    input.type = "number";
-                    input.min = "0";
-                    input.id = `input-${item.id}-${day}`;
-                    input.className = "w-11 h-8 bg-slate-50 border border-slate-300 rounded text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
-                    input.value = "0";
-                    input.onchange = () => {
-                        updateRowTotal(item.id);
-                        updateInputTableColumnTotals();
-                    };
-
-                    const btnPlus = document.createElement('button');
-                    btnPlus.type = "button";
-                    btnPlus.className = "w-7 h-7 bg-slate-100 rounded flex items-center justify-center text-xs hover:bg-slate-200 transition-colors font-bold text-slate-600";
-                    btnPlus.innerHTML = `<i class="fa-solid fa-plus"></i>`;
-                    btnPlus.onclick = () => adjustValue(item.id, day, 1);
-
-                    inputDiv.appendChild(btnMinus);
-                    inputDiv.appendChild(input);
-                    inputDiv.appendChild(btnPlus);
-                    tdDay.appendChild(inputDiv);
-                    tr.appendChild(tdDay);
-                });
-
-                const tdRowTotal = document.createElement('td');
-                tdRowTotal.id = `total-${item.id}`;
-                tdRowTotal.className = "p-3 text-center font-bold bg-slate-50 text-slate-800 text-base";
-                tdRowTotal.textContent = "0";
-                tr.appendChild(tdRowTotal);
-
-                tbody.appendChild(tr);
-            });
-
-            loadStoreOrder();
-        }
-
-        function adjustValue(itemId, day, delta) {
-            if (currentWeekKey === 'ALL') return; // 全週集計時は不可
-            const input = document.getElementById(`input-${itemId}-${day}`);
-            let currentVal = parseInt(input.value) || 0;
-            currentVal = Math.max(0, currentVal + delta);
-            input.value = currentVal;
-            updateRowTotal(itemId);
-            updateInputTableColumnTotals(); // 縦の曜日別集計を即座に再計算
-        }
-
-        function updateRowTotal(itemId) {
-            let total = 0;
-            daysOfWeek.forEach(day => {
-                const val = parseInt(document.getElementById(`input-${itemId}-${day}`).value) || 0;
-                total += val;
-            });
-            document.getElementById(`total-${itemId}`).textContent = total;
-        }
-
-        // 🌟 注文入力テーブルの最下部（縦の合計と総合計）をリアルタイム計算して描画する関数
-        function updateInputTableColumnTotals() {
-            let colTotals = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, grand: 0 };
+            const days = ['月', '火', '水', '木', '金'];
 
             obentoItems.forEach(item => {
-                daysOfWeek.forEach(day => {
-                    const val = parseInt(document.getElementById(`input-${item.id}-${day}`)?.value) || 0;
-                    colTotals[day] += val;
-                    colTotals.grand += val;
-                });
-            });
-
-            const footer = document.getElementById('orderInputTableFooter');
-            if (footer) {
-                footer.innerHTML = `
-                    <td class="p-3 pl-4 text-slate-900 font-bold flex items-center gap-1.5"><i class="fa-solid fa-calculator text-blue-600"></i> 店舗合計 (縦計)</td>
-                    <td class="p-3 text-center text-red-700 bg-red-50/50">${colTotals.mon}</td>
-                    <td class="p-3 text-center text-orange-700 bg-orange-50/50">${colTotals.tue}</td>
-                    <td class="p-3 text-center text-yellow-700 bg-yellow-50/50">${colTotals.wed}</td>
-                    <td class="p-3 text-center text-green-700 bg-green-50/50">${colTotals.thu}</td>
-                    <td class="p-3 text-center text-blue-700 bg-blue-50/50">${colTotals.fri}</td>
-                    <td class="p-3 text-center text-blue-800 bg-blue-100 text-base font-extrabold">${colTotals.grand}</td>
+                html += `
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="p-3 pl-4">
+                            <div class="font-bold text-slate-800 text-sm">${item.name}</div>
+                            <div class="text-xs text-slate-400 font-semibold">¥${item.price.toLocaleString()}</div>
+                        </td>
                 `;
-            }
-        }
 
-        // ==================== 4. 注文データの保存・読込・コピー処理 ====================
-
-        function loadStoreOrder() {
-            if (currentWeekKey === 'ALL') return;
-
-            const selectStore = document.getElementById('inputStoreSelect');
-            currentStoreId = selectStore.value;
-            
-            const storeName = selectStore.options[selectStore.selectedIndex]?.text || "";
-            document.getElementById('displayStoreName').textContent = storeName;
-
-            if (!orders[currentWeekKey]) {
-                orders[currentWeekKey] = {};
-            }
-            if (!orders[currentWeekKey][currentStoreId]) {
-                orders[currentWeekKey][currentStoreId] = {};
-            }
-
-            obentoItems.forEach(item => {
-                const savedData = orders[currentWeekKey][currentStoreId][item.id] || { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-                
-                daysOfWeek.forEach(day => {
-                    const input = document.getElementById(`input-${item.id}-${day}`);
-                    if (input) {
-                        input.value = savedData[day] !== undefined ? savedData[day] : 0;
+                days.forEach(day => {
+                    let qty = "";
+                    if (currentStoreData[day] && currentStoreData[day][item.id] !== undefined) {
+                        qty = currentStoreData[day][item.id];
                     }
+
+                    html += `
+                        <td class="p-3 text-center">
+                            <input type="number" min="0" max="999" 
+                                   data-item-id="${item.id}" data-day="${day}"
+                                   value="${qty}" 
+                                   placeholder="0"
+                                   ${isSubmitted ? 'readonly class="w-20 mx-auto text-center bg-slate-100 border border-slate-200 rounded-lg py-1 text-slate-500 font-bold focus:outline-none"' : 'class="w-20 mx-auto text-center bg-white border border-slate-200 rounded-lg py-1 text-slate-800 font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"'}
+                            >
+                        </td>
+                    `;
                 });
-                updateRowTotal(item.id);
+
+                html += `</tr>`;
             });
 
-            // 注文データのロード完了時に、最下部の縦合計行も再描画する
-            updateInputTableColumnTotals();
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
         }
 
-        function saveCurrentStoreOrder() {
-            if (currentWeekKey === 'ALL' || !currentStoreId) return;
+        function getStatusBadgeHTML(status) {
+            if (status === 'submitted') return `<span class="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-0.5 rounded-md border border-green-200 flex items-center gap-0.5"><i class="fa-solid fa-lock text-[10px]"></i> 入力完了</span>`;
+            if (status === 'saving') return `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5"><i class="fa-solid fa-pen text-[10px]"></i> 下書き保存</span>`;
+            return `<span class="bg-slate-100 text-slate-500 text-xs font-bold px-2.5 py-0.5 rounded-md border border-slate-200 flex items-center gap-0.5"><i class="fa-solid fa-circle-minus text-[10px]"></i> 未入力</span>`;
+        }
 
-            if (!orders[currentWeekKey]) {
-                orders[currentWeekKey] = {};
-            }
-            if (!orders[currentWeekKey][currentStoreId]) {
-                orders[currentWeekKey][currentStoreId] = {};
-            }
+        function saveOrderData(isFinalSubmit) {
+            if (!orders[selectedWeek]) orders[selectedWeek] = {};
+            if (!orders[selectedWeek][selectedStore]) orders[selectedWeek][selectedStore] = {};
 
-            obentoItems.forEach(item => {
-                const monVal = parseInt(document.getElementById(`input-${item.id}-mon`)?.value) || 0;
-                const tueVal = parseInt(document.getElementById(`input-${item.id}-tue`)?.value) || 0;
-                const wedVal = parseInt(document.getElementById(`input-${item.id}-wed`)?.value) || 0;
-                const thuVal = parseInt(document.getElementById(`input-${item.id}-thu`)?.value) || 0;
-                const friVal = parseInt(document.getElementById(`input-${item.id}-fri`)?.value) || 0;
+            const container = document.getElementById('orderFormContainer');
+            const inputs = container.querySelectorAll('input[type="number"]');
 
-                orders[currentWeekKey][currentStoreId][item.id] = {
-                    mon: monVal,
-                    tue: tueVal,
-                    wed: wedVal,
-                    thu: thuVal,
-                    fri: friVal
-                };
+            const days = ['月', '火', '水', '木', '金'];
+            days.forEach(day => {
+                if (!orders[selectedWeek][selectedStore][day]) orders[selectedWeek][selectedStore][day] = {};
             });
+
+            inputs.forEach(input => {
+                const itemId = input.getAttribute('data-item-id');
+                const day = input.getAttribute('data-day');
+                const val = parseInt(input.value, 10);
+
+                if (!isNaN(val) && val >= 0) {
+                    orders[selectedWeek][selectedStore][day][itemId] = val;
+                } else {
+                    orders[selectedWeek][selectedStore][day][itemId] = 0;
+                }
+            });
+
+            orders[selectedWeek][selectedStore].status = isFinalSubmit ? "submitted" : "saving";
 
             saveDataToStorage();
-
-            showToast(`${document.getElementById('displayStoreName').textContent} の注文データを保存しました！`, 'success');
-            updateSummaryData();
+            renderOrderInputForm();
             updateInputStatusStats();
+            showToast(isFinalSubmit ? "注文データを入力完了として確定しました！" : "注文データを下書き保存しました。", "success");
         }
 
-        function copyPreviousWeekOrder() {
-            if (currentWeekKey === 'ALL') return;
-
-            const select = document.getElementById('targetWeekSelect');
-            const currentIndex = select.selectedIndex;
-            
-            // 全週[0]、その次の最小履歴週[1]はコピー不可
-            if (currentIndex <= 1) {
-                showToast("これより前の週（コピー元）がありません。", "error");
-                return;
-            }
-            
-            const prevOption = select.options[currentIndex - 1];
-            const prevWeekKey = prevOption.value;
-            const prevWeekLabel = prevOption.textContent.split(' ')[0];
-
-            const hasPrevOrder = orders[prevWeekKey] && orders[prevWeekKey][currentStoreId];
-            
-            if (!hasPrevOrder) {
-                showToast(`選択店舗は、前週（${prevWeekLabel}）の注文履歴が登録されていません。`, "error");
-                return;
-            }
-
-            const prevStoreOrder = orders[prevWeekKey][currentStoreId];
-            let copySuccessCount = 0;
-
-            obentoItems.forEach(item => {
-                const prevItemData = prevStoreOrder[item.id] || { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-                
-                daysOfWeek.forEach(day => {
-                    const input = document.getElementById(`input-${item.id}-${day}`);
-                    if (input) {
-                        input.value = prevItemData[day] !== undefined ? prevItemData[day] : 0;
-                        if (prevItemData[day] > 0) copySuccessCount++;
-                    }
-                });
-                updateRowTotal(item.id);
-            });
-
-            updateInputTableColumnTotals(); // コピー後も集計行を再計算して描画
-
-            if (copySuccessCount > 0) {
-                showToast(`前週（${prevWeekLabel}）の履歴から同じ数量をコピーしました。確定するには「保存」を押してください。`, "success");
-            } else {
-                showToast(`前週の注文はすべて0件でした。反映しました。`, "info");
-            }
-        }
-
-        function clearCurrentStoreOrder() {
-            if (currentWeekKey === 'ALL') return;
-            obentoItems.forEach(item => {
-                daysOfWeek.forEach(day => {
-                    const input = document.getElementById(`input-${item.id}-${day}`);
-                    if (input) input.value = 0;
-                });
-                updateRowTotal(item.id);
-            });
-            updateInputTableColumnTotals(); // クリア後も集計行をリセット
-            showToast("入力欄をリセットしました（保存ボタンを押すと反映されます）。", 'info');
-        }
-
-        function fillSampleOrder() {
-            if (currentWeekKey === 'ALL') return;
-            obentoItems.forEach(item => {
-                daysOfWeek.forEach(day => {
-                    const input = document.getElementById(`input-${item.id}-${day}`);
-                    if (input) {
-                        input.value = Math.random() > 0.4 ? Math.floor(Math.random() * 6) : 0;
-                    }
-                });
-                updateRowTotal(item.id);
-            });
-            updateInputTableColumnTotals(); // 自動入力後も集計行を再計算して描画
-            showToast("テスト用の値をセットしました！保存ボタンを押すと確定します。", 'info');
-        }
-
-        // ==================== 5. 工場集計ダッシュボード ====================
-
-        let currentSummaryView = 'item-day';
-
-        function switchSummaryView(viewType) {
-            currentSummaryView = viewType;
-            
-            const btnItemDay = document.getElementById('btn-view-item-day');
-            const btnStoreItem = document.getElementById('btn-view-store-item');
-            const btnStoreItemDay = document.getElementById('btn-view-store-item-day');
-            
-            const containerItemDay = document.getElementById('view-item-day-container');
-            const containerStoreItem = document.getElementById('view-store-item-container');
-            const containerStoreItemDay = document.getElementById('view-store-item-day-container');
-
-            [btnItemDay, btnStoreItem, btnStoreItemDay].forEach(btn => {
-                btn.className = "text-sm font-medium text-slate-500 hover:text-slate-800 pb-2 border-b-2 border-transparent px-1";
-            });
-            [containerItemDay, containerStoreItem, containerStoreItemDay].forEach(c => c.classList.add('hidden'));
-
-            if (viewType === 'item-day') {
-                btnItemDay.className = "text-sm font-semibold border-b-2 border-blue-600 pb-2 text-blue-600 px-1";
-                containerItemDay.classList.remove('hidden');
-            } else if (viewType === 'store-item') {
-                btnStoreItem.className = "text-sm font-semibold border-b-2 border-blue-600 pb-2 text-blue-600 px-1";
-                containerStoreItem.classList.remove('hidden');
-            } else if (viewType === 'store-item-day') {
-                btnStoreItemDay.className = "text-sm font-semibold border-b-2 border-blue-600 pb-2 text-blue-600 px-1";
-                containerStoreItemDay.classList.remove('hidden');
-            }
-
-            updateSummaryData();
-        }
-
-        // 集計統計情報の計算と描画（全週・特定週別の集計を一本化）
-        function updateSummaryData() {
-            // 累計用・個別用のデータ抽出
-            let weeksToAggregate = [];
-            if (currentWeekKey === 'ALL') {
-                weeksToAggregate = Object.keys(orders); // 全週分
-            } else {
-                weeksToAggregate = [currentWeekKey];    // 1週間分のみ
-            }
-
-            // 1. 各集計値の初期化
-            let totalOrders = 0;
-            let dayTotals = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-            let itemTotals = {}; 
-            let storeTotals = {}; 
-
-            obentoItems.forEach(item => {
-                itemTotals[item.id] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, total: 0 };
-            });
-
-            stores.forEach(store => {
-                storeTotals[store.id] = { total: 0 };
-                obentoItems.forEach(item => {
-                    storeTotals[store.id][item.id] = 0;
-                });
-            });
-
-            let activeStoreIds = new Set();
-
-            // 2. 複数週のデータを合算
-            weeksToAggregate.forEach(weekKey => {
-                const weekOrders = orders[weekKey] || {};
-                
-                stores.forEach(store => {
-                    const storeOrder = weekOrders[store.id];
-                    if (storeOrder) {
-                        obentoItems.forEach(item => {
-                            const itemOrder = storeOrder[item.id];
-                            if (itemOrder) {
-                                daysOfWeek.forEach(day => {
-                                    const qty = parseInt(itemOrder[day]) || 0;
-                                    if (qty > 0) {
-                                        activeStoreIds.add(store.id);
-                                    }
-
-                                    dayTotals[day] += qty;
-                                    itemTotals[item.id][day] += qty;
-                                    itemTotals[item.id].total += qty;
-                                    totalOrders += qty;
-
-                                    storeTotals[store.id][item.id] += qty;
-                                    storeTotals[store.id].total += qty;
-                                });
-                            }
-                        });
-                    }
-                });
-            });
-
-            // 3. ウィジェットパネルの更新
-            document.getElementById('totalWeeklyOrdersCount').innerHTML = `${totalOrders.toLocaleString()} <span class="text-sm font-normal text-slate-500">個</span>`;
-            document.getElementById('filledStoresRatio').textContent = `${activeStoreIds.size} / ${stores.length} 店舗`;
-            document.getElementById('activeItemsCount').textContent = `${obentoItems.length} 種`;
-
-            let peakDay = "-";
-            let maxQty = -1;
-            daysOfWeek.forEach(day => {
-                if (dayTotals[day] > maxQty && dayTotals[day] > 0) {
-                    maxQty = dayTotals[day];
-                    peakDay = `${dayLabels[day]}曜日 (${maxQty}個)`;
-                }
-            });
-            document.getElementById('peakDayDisplay').textContent = peakDay;
-
-            // 4. テーブル描画
-            if (currentSummaryView === 'item-day') {
-                renderItemDaySummaryTable(itemTotals, dayTotals);
-            } else if (currentSummaryView === 'store-item') {
-                renderStoreItemSummaryTable(storeTotals);
-            } else if (currentSummaryView === 'store-item-day') {
-                renderStoreItemDaySummaryTableCombined(storeTotals, weeksToAggregate);
-            }
-        }
-
-        // ① お弁当 × 曜日別 テーブル描画
-        function renderItemDaySummaryTable(itemTotals, dayTotals) {
-            const tbody = document.getElementById('itemDaySummaryTableBody');
-            tbody.innerHTML = '';
-
-            if (obentoItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">データがありません</td></tr>`;
-                return;
-            }
-
-            obentoItems.forEach(item => {
-                const data = itemTotals[item.id];
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-200 hover:bg-slate-50 transition-colors text-sm";
-
-                tr.innerHTML = `
-                    <td class="p-3 pl-4 font-semibold text-slate-700">${item.name}</td>
-                    <td class="p-3 text-center ${data.mon > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${data.mon}</td>
-                    <td class="p-3 text-center ${data.tue > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${data.tue}</td>
-                    <td class="p-3 text-center ${data.wed > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${data.wed}</td>
-                    <td class="p-3 text-center ${data.thu > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${data.thu}</td>
-                    <td class="p-3 text-center ${data.fri > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${data.fri}</td>
-                    <td class="p-3 text-center font-bold bg-slate-50 text-blue-600 text-base">${data.total}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            const footer = document.getElementById('itemDaySummaryTableFooter');
-            let grandTotal = daysOfWeek.reduce((acc, day) => acc + dayTotals[day], 0);
-
-            footer.innerHTML = `
-                <td class="p-3 pl-4 text-slate-900">曜日別総個数</td>
-                <td class="p-3 text-center text-red-700">${dayTotals.mon}</td>
-                <td class="p-3 text-center text-orange-700">${dayTotals.tue}</td>
-                <td class="p-3 text-center text-yellow-700">${dayTotals.wed}</td>
-                <td class="p-3 text-center text-green-700">${dayTotals.thu}</td>
-                <td class="p-3 text-center text-blue-700">${dayTotals.fri}</td>
-                <td class="p-3 text-center text-blue-800 bg-slate-300 text-base">${grandTotal}</td>
-            `;
-        }
-
-        // ② 店舗 × お弁当別テーブル描画
-        function renderStoreItemSummaryTable(storeTotals) {
-            const header = document.getElementById('storeItemSummaryHeader');
-            const tbody = document.getElementById('storeItemSummaryTableBody');
-            
-            header.innerHTML = '';
-            tbody.innerHTML = '';
-
-            const thStore = document.createElement('th');
-            thStore.className = "p-3 pl-4 min-w-[150px]";
-            thStore.textContent = "店舗名";
-            header.appendChild(thStore);
-
-            obentoItems.forEach(item => {
-                const th = document.createElement('th');
-                th.className = "p-3 text-center text-xs min-w-[100px] whitespace-normal font-semibold";
-                th.textContent = item.name;
-                header.appendChild(th);
-            });
-
-            const thTotal = document.createElement('th');
-            thTotal.className = "p-3 text-center bg-slate-200 text-slate-800 min-w-[100px]";
-            thTotal.textContent = "店舗別合計";
-            header.appendChild(thTotal);
-
-            stores.forEach(store => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-200 hover:bg-slate-50 transition-colors text-sm";
-
-                const tdName = document.createElement('td');
-                tdName.className = "p-3 pl-4 font-semibold text-slate-700";
-                tdName.textContent = store.name;
-                tr.appendChild(tdName);
-
-                obentoItems.forEach(item => {
-                    const qty = storeTotals[store.id][item.id] || 0;
-                    const tdQty = document.createElement('td');
-                    tdQty.className = `p-3 text-center ${qty > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}`;
-                    tdQty.textContent = qty;
-                    tr.appendChild(tdQty);
-                });
-
-                const tdTotal = document.createElement('td');
-                tdTotal.className = "p-3 text-center font-bold bg-slate-50 text-blue-600";
-                tdTotal.textContent = storeTotals[store.id].total;
-                tr.appendChild(tdTotal);
-
-                tbody.appendChild(tr);
-            });
-        }
-
-        // ③ 店舗 × お弁当 × 曜日別テーブル描画 (累計＆個別対応)
-        function renderStoreItemDaySummaryTableCombined(aggregatedStoreTotals, weeksToAggregate) {
-            const tbody = document.getElementById('storeItemDaySummaryTableBody');
-            tbody.innerHTML = '';
-
-            const hideZero = document.getElementById('hideZeroOrderRows').checked;
-
-            if (stores.length === 0 || obentoItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 font-medium">データがありません</td></tr>`;
-                return;
-            }
-
-            stores.forEach(store => {
-                let rowsHTML = "";
-                let renderedRowsCount = 0;
-                let storeTotals = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, total: 0 };
-
-                // 選択されているすべての週から、商品・曜日別の合算値を算出
-                obentoItems.forEach(item => {
-                    let mon = 0, tue = 0, wed = 0, thu = 0, fri = 0;
-
-                    weeksToAggregate.forEach(weekKey => {
-                        const o = (orders[weekKey] && orders[weekKey][store.id] && orders[weekKey][store.id][item.id]) || { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-                        mon += parseInt(o.mon) || 0;
-                        tue += parseInt(o.tue) || 0;
-                        wed += parseInt(o.wed) || 0;
-                        thu += parseInt(o.thu) || 0;
-                        fri += parseInt(o.fri) || 0;
-                    });
-
-                    const total = mon + tue + wed + thu + fri;
-
-                    storeTotals.mon += mon;
-                    storeTotals.tue += tue;
-                    storeTotals.wed += wed;
-                    storeTotals.thu += thu;
-                    storeTotals.fri += fri;
-                    storeTotals.total += total;
-
-                    if (hideZero && total === 0) {
-                        return;
-                    }
-
-                    renderedRowsCount++;
-                    rowsHTML += `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50/50 text-xs">
-                            ${renderedRowsCount === 1 ? `<td id="cell-store-${store.id}" class="p-3 pl-4 font-bold text-slate-900 border-r border-slate-100 bg-slate-50/30 align-middle" rowspan="REPLACE_ROWSPAN">${store.name}</td>` : ''}
-                            <td class="p-2.5 font-semibold text-slate-700">${item.name}</td>
-                            <td class="p-2.5 text-center ${mon > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${mon}</td>
-                            <td class="p-2.5 text-center ${tue > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${tue}</td>
-                            <td class="p-2.5 text-center ${wed > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${wed}</td>
-                            <td class="p-2.5 text-center ${thu > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${thu}</td>
-                            <td class="p-2.5 text-center ${fri > 0 ? 'font-bold text-slate-800' : 'text-slate-400'}">${fri}</td>
-                            <td class="p-2.5 text-center font-bold bg-slate-50 text-blue-600 text-sm">${total}</td>
-                        </tr>
-                    `;
-                });
-
-                if (renderedRowsCount > 0 || !hideZero) {
-                    const totalRowSpan = renderedRowsCount + 1;
-                    rowsHTML = rowsHTML.replace('REPLACE_ROWSPAN', totalRowSpan);
-
-                    tbody.insertAdjacentHTML('beforeend', rowsHTML);
-
-                    const subtotalTr = document.createElement('tr');
-                    subtotalTr.className = "border-b border-slate-200 bg-slate-100/60 text-xs font-bold text-slate-800";
-                    subtotalTr.innerHTML = `
-                        ${renderedRowsCount === 0 ? `<td class="p-3 pl-4 font-bold text-slate-900 border-r border-slate-100 bg-slate-50/30">${store.name}</td>` : ''}
-                        <td class="p-2.5 pl-4 text-slate-500 font-bold"><i class="fa-solid fa-calculator mr-1"></i> ${store.name} 小計</td>
-                        <td class="p-2.5 text-center text-red-700">${storeTotals.mon}</td>
-                        <td class="p-2.5 text-center text-orange-700">${storeTotals.tue}</td>
-                        <td class="p-2.5 text-center text-yellow-700">${storeTotals.wed}</td>
-                        <td class="p-2.5 text-center text-green-700">${storeTotals.thu}</td>
-                        <td class="p-2.5 text-center text-blue-700">${storeTotals.fri}</td>
-                        <td class="p-2.5 text-center bg-slate-200 text-slate-900 text-sm">${storeTotals.total}</td>
-                    `;
-                    tbody.appendChild(subtotalTr);
-                }
-            });
-
-            if (tbody.children.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="p-8 text-center text-slate-400">
-                            <i class="fa-solid fa-filter-circle-xmark text-2xl mb-2 block"></i>
-                            表示可能な注文データが0件です。
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        // 注文入力の全体ステータス集計
         function updateInputStatusStats() {
-            document.getElementById('statTotalStores').textContent = `${stores.length} 店舗`;
-            
-            if (currentWeekKey === 'ALL') {
-                document.getElementById('statFilledStores').textContent = "集計モード";
-                return;
-            }
+            let uninputCount = 0;
+            let savingCount = 0;
+            let submittedCount = 0;
 
-            const weekOrders = orders[currentWeekKey] || {};
-            let filledCount = 0;
+            const weekData = orders[selectedWeek] || {};
 
-            stores.forEach(store => {
-                const storeOrder = weekOrders[store.id];
-                let hasValue = false;
-                if (storeOrder) {
-                    obentoItems.forEach(item => {
-                        const itemOrder = storeOrder[item.id];
-                        if (itemOrder) {
-                            daysOfWeek.forEach(day => {
-                                if ((parseInt(itemOrder[day]) || 0) > 0) {
-                                    hasValue = true;
-                                }
-                            });
+            stores.forEach(st => {
+                const stData = weekData[st.id];
+                if (!stData || stData.status === 'uninput') {
+                    uninputCount++;
+                } else if (stData.status === 'saving') {
+                    savingCount++;
+                } else if (stData.status === 'submitted') {
+                    submittedCount++;
+                }
+            });
+
+            document.getElementById('statUninput').textContent = uninputCount;
+            document.getElementById('statSaving').textContent = savingCount;
+            document.getElementById('statSubmitted').textContent = submittedCount;
+        }
+
+        // ==================== 📊 集計ロジック系 ====================
+
+        function updateSummaryData() {
+            const filterStoreId = document.getElementById('filterStore').value;
+            const filterDayId = document.getElementById('filterDay').value;
+            const weekData = orders[selectedWeek] || {};
+
+            const days = ['月', '火', '水', '木', '金'];
+
+            // 1. 商品別データ集計
+            const itemTotals = {};
+            obentoItems.forEach(it => {
+                itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 };
+            });
+
+            stores.forEach(st => {
+                if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
+
+                const stData = weekData[st.id];
+                if (!stData) return;
+
+                days.forEach(day => {
+                    if (filterDayId !== 'all' && day !== filterDayId) return;
+
+                    const dayData = stData[day];
+                    if (!dayData) return;
+
+                    obentoItems.forEach(it => {
+                        if (dayData[it.id] !== undefined) {
+                            itemTotals[it.id].qty += dayData[it.id];
                         }
                     });
-                }
-                if (hasValue) filledCount++;
+                });
             });
 
-            document.getElementById('statFilledStores').textContent = `${filledCount} 店舗`;
-        }
+            const itemTableBody = document.getElementById('summaryItemTableBody');
+            itemTableBody.innerHTML = '';
+            
+            let totalOverallMoney = 0;
 
-        // ==================== 6. CSVダウンロード機能 (Excel対応版・全週対応) ====================
+            obentoItems.forEach(it => {
+                const record = itemTotals[it.id];
+                const money = record.qty * record.price;
+                totalOverallMoney += money;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-3 pl-5 font-bold text-slate-800">${record.name}</td>
+                    <td class="p-3 text-right text-xs text-slate-400 font-semibold">¥${record.price.toLocaleString()}</td>
+                    <td class="p-3 text-center bg-blue-50/30 text-blue-700 font-bold text-base">${record.qty.toLocaleString()}</td>
+                    <td class="p-3 text-right pr-5 text-slate-800 font-bold">¥${money.toLocaleString()}</td>
+                `;
+                itemTableBody.appendChild(tr);
+            });
+
+            // 総合計行を追加
+            const trTotal = document.createElement('tr');
+            trTotal.className = "bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900";
+            trTotal.innerHTML = `
+                <td class="p-4 pl-5 text-sm" colspan="2">合計金額総合計 (税込)</td>
+                <td class="p-4 text-center text-slate-400 font-medium text-xs">ー</td>
+                <td class="p-4 text-right pr-5 text-base text-blue-700">¥${totalOverallMoney.toLocaleString()}</td>
+            `;
+            itemTableBody.appendChild(trTotal);
+
+            // 2. 店舗別一覧集計
+            const storeTableBody = document.getElementById('summaryStoreTableBody');
+            storeTableBody.innerHTML = '';
+
+            stores.forEach(st => {
+                const stData = weekData[st.id];
+                const status = stData ? stData.status : 'uninput';
+                
+                let storeMoney = 0;
+                if (stData) {
+                    days.forEach(day => {
+                        const dayData = stData[day];
+                        if (!dayData) return;
+                        obentoItems.forEach(it => {
+                            if (dayData[it.id] !== undefined) {
+                                storeMoney += dayData[it.id] * it.price;
+                            }
+                        });
+                    });
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-3 pl-5 font-bold text-slate-800 text-xs">${st.name}</td>
+                    <td class="p-3 text-center">${getStatusBadgeHTML(status)}</td>
+                    <td class="p-3 text-right pr-5 font-bold text-slate-700 text-xs">¥${storeMoney.toLocaleString()}</td>
+                `;
+                storeTableBody.appendChild(tr);
+            });
+        }
 
         function exportToCSV() {
-            if (obentoItems.length === 0) {
-                showToast("出力するアイテムがありません。", "error");
-                return;
-            }
+            const filterStoreId = document.getElementById('filterStore').value;
+            const filterDayId = document.getElementById('filterDay').value;
+            const weekData = orders[selectedWeek] || {};
+            const days = ['月', '火', '水', '木', '金'];
 
-            let weeksToAggregate = [];
-            if (currentWeekKey === 'ALL') {
-                weeksToAggregate = Object.keys(orders);
-            } else {
-                weeksToAggregate = [currentWeekKey];
-            }
-            
-            // 1. 各お弁当ごとの曜日別合計を集計
-            let itemTotals = {};
-            obentoItems.forEach(item => {
-                itemTotals[item.id] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, total: 0 };
-            });
+            let csvContent = "\uFEFF商品名,単価,曜日,店舗名,発注数量,小計\n";
 
-            let dayTotals = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
+            obentoItems.forEach(it => {
+                stores.forEach(st => {
+                    if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
+                    
+                    const stData = weekData[st.id];
+                    if (!stData) return;
 
-            weeksToAggregate.forEach(weekKey => {
-                const weekOrders = orders[weekKey] || {};
-                stores.forEach(store => {
-                    const storeOrder = weekOrders[store.id];
-                    if (storeOrder) {
-                        obentoItems.forEach(item => {
-                            const itemOrder = storeOrder[item.id];
-                            if (itemOrder) {
-                                daysOfWeek.forEach(day => {
-                                    const qty = parseInt(itemOrder[day]) || 0;
-                                    itemTotals[item.id][day] += qty;
-                                    itemTotals[item.id].total += qty;
-                                    dayTotals[day] += qty;
-                                });
-                            }
-                        });
-                    }
-                });
-            });
+                    days.forEach(day => {
+                        if (filterDayId !== 'all' && day !== filterDayId) return;
 
-            let csvContent = "\uFEFF"; // UTF-8 BOM
+                        const dayData = stData[day];
+                        if (!dayData || dayData[it.id] === undefined || dayData[it.id] === 0) return;
 
-            // ヘッダー
-            const rangeName = currentWeekKey === 'ALL' ? "全登録週(累計)" : `${currentWeekKey}週分`;
-            csvContent += `お弁当注文総集計データ (${rangeName})\n`;
-            csvContent += `お弁当名,月曜日,火曜日,水曜日,木曜日,金曜日,合計\n`;
-
-            // ボディ (アイテム別)
-            obentoItems.forEach(item => {
-                const t = itemTotals[item.id];
-                csvContent += `"${item.name}",${t.mon},${t.tue},${t.wed},${t.thu},${t.fri},${t.total}\n`;
-            });
-
-            // 曜日別合計
-            const grandTotal = daysOfWeek.reduce((acc, day) => acc + dayTotals[day], 0);
-            csvContent += `曜日別総個数,${dayTotals.mon},${dayTotals.tue},${dayTotals.wed},${dayTotals.thu},${dayTotals.fri},${grandTotal}\n\n`;
-
-            // 3. 「店舗別 × お弁当別 × 曜日別」の詳細
-            csvContent += `【詳細】店舗別・お弁当別・曜日別の週間注文内訳\n`;
-            csvContent += `店舗名,お弁当名,月曜日,火曜日,水曜日,木曜日,金曜日,合計\n`;
-            
-            stores.forEach(store => {
-                let storeMon = 0, storeTue = 0, storeWed = 0, storeThu = 0, storeFri = 0, storeSum = 0;
-
-                obentoItems.forEach(item => {
-                    let mon = 0, tue = 0, wed = 0, thu = 0, fri = 0;
-
-                    weeksToAggregate.forEach(weekKey => {
-                        const o = (orders[weekKey] && orders[weekKey][store.id] && orders[weekKey][store.id][item.id]) || { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-                        mon += parseInt(o.mon) || 0;
-                        tue += parseInt(o.tue) || 0;
-                        wed += parseInt(o.wed) || 0;
-                        thu += parseInt(o.thu) || 0;
-                        fri += parseInt(o.fri) || 0;
+                        const qty = dayData[it.id];
+                        const subtotal = qty * it.price;
+                        
+                        csvContent += `"${it.name}",${it.price},"${day}曜日","${st.name}",${qty},${subtotal}\n`;
                     });
-
-                    const total = mon + tue + wed + thu + fri;
-
-                    storeMon += mon;
-                    storeTue += tue;
-                    storeWed += wed;
-                    storeThu += thu;
-                    storeFri += fri;
-                    storeSum += total;
-
-                    if (total > 0) {
-                        csvContent += `"${store.name}","${item.name}",${mon},${tue},${wed},${thu},${fri},${total}\n`;
-                    }
                 });
-                
-                // 店舗ごとの小計
-                csvContent += `"${store.name} 小計",,${storeMon},${storeTue},${storeWed},${storeThu},${storeFri},${storeSum}\n`;
-            });
-            csvContent += `\n`;
-
-            // 4. 店舗別・お弁当別の単純総数マトリクス
-            csvContent += `【参考】店舗別・お弁当別の総発注数\n`;
-            
-            let storeHeader = "店舗名,";
-            obentoItems.forEach(item => {
-                storeHeader += `"${item.name}",`;
-            });
-            storeHeader += "店舗合計\n";
-            csvContent += storeHeader;
-
-            stores.forEach(store => {
-                let row = `"${store.name}",`;
-                let storeSum = 0;
-                
-                obentoItems.forEach(item => {
-                    let itemSum = 0;
-                    weeksToAggregate.forEach(weekKey => {
-                        const storeOrder = orders[weekKey] && orders[weekKey][store.id];
-                        if (storeOrder && storeOrder[item.id]) {
-                            daysOfWeek.forEach(day => {
-                                itemSum += parseInt(storeOrder[item.id][day]) || 0;
-                            });
-                        }
-                    });
-                    row += `${itemSum},`;
-                    storeSum += itemSum;
-                });
-                row += `${storeSum}\n`;
-                csvContent += row;
             });
 
-            // ファイルダウンロード処理
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            
             link.setAttribute("href", url);
-            link.setAttribute("download", `お弁当注文集計_期間_${rangeName}.csv`);
-            link.style.visibility = 'hidden';
-            
+            link.setAttribute("download", `お弁当注文集計_${selectedWeek}_店舗-${filterStoreId}_曜日-${filterDayId}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
-            showToast("Excel用CSVをダウンロードしました！", "success");
         }
 
+        // ==================== 🔐 マスタセキュリティ・管理系 ====================
 
-        // ==================== 7. マスタ管理 (追加・変更・削除) ====================
+        function verifyMasterPassword() {
+            const input = document.getElementById('inputMasterPassword');
+            if (input.value === masterPassword) {
+                isMasterAuthenticated = true;
+                document.getElementById('masterPasswordLock').classList.add('hidden');
+                document.getElementById('masterConfigContent').classList.remove('hidden');
+                renderMasterTables();
+                showToast("マスターマスタ認証に成功しました。", "success");
+            } else {
+                showToast("パスワードが一致しません。", "error");
+                input.value = "";
+            }
+        }
+
+        function changeMasterPasswordPrompt() {
+            const newPass = prompt("新しいマスターパスワードを入力してください:", masterPassword);
+            if (newPass === null) return;
+            if (newPass.trim() === "") {
+                showToast("空のパスワードは設定できません。", "error");
+                return;
+            }
+            masterPassword = newPass.trim();
+            saveDataToStorage();
+            showToast("マスターパスワードを変更し、クラウドに保存しました。", "success");
+        }
+
+        function clearAllSystemData() {
+            if (!confirm("⚠️警告: クラウド上のすべての注文履歴、商品マスタ、店舗マスタが初期化されます。本当によろしいですか？")) return;
+            if (prompt("確認のため『初期化』と入力してください:") !== "初期化") {
+                showToast("処理がキャンセルされました。", "info");
+                return;
+            }
+
+            orders = {};
+            saveDataToStorage();
+            showToast("システムデータをリセットしました。", "success");
+            handleWeekChange();
+        }
 
         function renderMasterTables() {
-            renderItemMasterTable();
-            renderStoreMasterTable();
-            
-            document.getElementById('badgeItemCount').textContent = `${obentoItems.length} 点`;
-            document.getElementById('badgeStoreCount').textContent = `${stores.length} 店舗`;
-        }
-
-        function renderItemMasterTable() {
-            const tbody = document.getElementById('itemMasterTableBody');
-            tbody.innerHTML = '';
-
-            obentoItems.forEach((item) => {
+            // 商品マスタテーブル
+            const itemBody = document.getElementById('masterItemTableBody');
+            itemBody.innerHTML = '';
+            obentoItems.forEach((item, index) => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm";
+                tr.className = "hover:bg-slate-50/50";
                 tr.innerHTML = `
-                    <td class="p-3 pl-4 text-slate-500 font-mono text-xs">${item.id}</td>
-                    <td class="p-3 font-semibold text-slate-700">
-                        <input type="text" value="${item.name}" onchange="renameItem('${item.id}', this.value)" class="bg-transparent hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 w-full border border-transparent hover:border-slate-300">
+                    <td class="p-3 pl-5">
+                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${item.id}</div>
+                        <div class="text-sm font-bold text-slate-800">${item.name}</div>
                     </td>
-                    <td class="p-3 text-right">
-                        <button onclick="requestRemoveItem('${item.id}')" class="text-red-500 hover:text-red-700 p-1.5 transition-colors" title="削除">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                    <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
+                    <td class="p-3 text-center pr-5">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="editItemPrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                     </td>
                 `;
-                tbody.appendChild(tr);
+                itemBody.appendChild(tr);
+            });
+
+            // 店舗マスタテーブル
+            const storeBody = document.getElementById('masterStoreTableBody');
+            storeBody.innerHTML = '';
+            stores.forEach((store, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50";
+                tr.innerHTML = `
+                    <td class="p-3 pl-5">
+                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${store.id}</div>
+                        <div class="text-sm font-bold text-slate-800">${store.name}</div>
+                    </td>
+                    <td class="p-3 text-center pr-5">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                `;
+                storeBody.appendChild(tr);
             });
         }
 
-        function addNewItem(e) {
-            e.preventDefault();
-            const nameInput = document.getElementById('newItemName');
-            const name = nameInput.value.trim();
+        function addNewItemPrompt() {
+            const name = prompt("新規追加するお弁当の商品名を入力してください:");
+            if (!name) return;
+            const priceStr = prompt(`「${name}」の税込単価(半角数字)を入力してください:`, "500");
+            if (!priceStr) return;
+            const price = parseInt(priceStr, 10);
+            if (isNaN(price) || price < 0) {
+                showToast("不正な金額が入力されました。", "error");
+                return;
+            }
+
+            const nextIndex = obentoItems.length + 1;
+            const newId = "ITEM" + String(nextIndex).padStart(3, '0');
+
+            obentoItems.push({ id: newId, name: name.trim(), price: price });
+            saveDataToStorage();
+            renderMasterTables();
+            showToast(`新規商品「${name}」を追加登録しました。`, "success");
+        }
+
+        function editItemPrompt(index) {
+            const item = obentoItems[index];
+            const name = prompt("商品名を変更:", item.name);
+            if (!name) return;
+            const priceStr = prompt("価格を変更(半角数字):", item.price);
+            if (!priceStr) return;
+            const price = parseInt(priceStr, 10);
+            if (isNaN(price) || price < 0) return;
+
+            obentoItems[index].name = name.trim();
+            obentoItems[index].price = price;
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("商品情報を更新しました。", "success");
+        }
+
+        function deleteItemAction(index) {
+            const item = obentoItems[index];
+            if (!confirm(`本当に「${item.name}」をマスタから削除しますか？\n(注: 過去の注文集計データ等で数値の歪みが出る場合があります)`)) return;
+            obentoItems.splice(index, 1);
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("マスタから商品を削除しました。", "success");
+        }
+
+        function addNewStorePrompt() {
+            const name = prompt("新規追加する店舗名を入力してください:");
             if (!name) return;
 
-            const maxIdNum = obentoItems.reduce((max, item) => {
-                const num = parseInt(item.id.replace('ITEM-', ''));
-                return num > max ? num : max;
-            }, 0);
-            const newId = `ITEM-${String(maxIdNum + 1).padStart(3, '0')}`;
+            const nextIndex = stores.length + 1;
+            const newId = "STORE" + String(nextIndex).padStart(3, '0');
 
-            obentoItems.push({ id: newId, name: name });
-            nameInput.value = '';
-
-            renderMasterTables();
-            renderOrderInputForm();
-            updateSummaryData();
+            stores.push({ id: newId, name: name.trim() });
             saveDataToStorage();
-            showToast(`お弁当 「${name}」 を追加しました。`, 'success');
+            renderMasterTables();
+            showToast(`新規店舗「${name}」を追加登録しました。`, "success");
         }
 
-        function renameItem(itemId, newName) {
-            const cleanedName = newName.trim();
-            if (!cleanedName) return;
-
-            const item = obentoItems.find(i => i.id === itemId);
-            if (item) {
-                const oldName = item.name;
-                item.name = cleanedName;
-                renderMasterTables();
-                renderOrderInputForm();
-                updateSummaryData();
-                saveDataToStorage();
-                showToast(`商品名を 「${oldName}」 から 「${cleanedName}」 に変更しました。`, 'success');
-            }
-        }
-
-        function renderStoreMasterTable() {
-            const tbody = document.getElementById('storeMasterTableBody');
-            tbody.innerHTML = '';
-
-            stores.forEach((store) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm";
-                tr.innerHTML = `
-                    <td class="p-3 pl-4 text-slate-500 font-mono text-xs">${store.id}</td>
-                    <td class="p-3 font-semibold text-slate-700">
-                        <input type="text" value="${store.name}" onchange="renameStore('${store.id}', this.value)" class="bg-transparent hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 w-full border border-transparent hover:border-slate-300">
-                    </td>
-                    <td class="p-3 text-right">
-                        <button onclick="requestRemoveStore('${store.id}')" class="text-red-500 hover:text-red-700 p-1.5 transition-colors" title="削除">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function addNewStore(e) {
-            e.preventDefault();
-            const nameInput = document.getElementById('newStoreName');
-            const name = nameInput.value.trim();
+        function editStorePrompt(index) {
+            const store = stores[index];
+            const name = prompt("店舗名を変更:", store.name);
             if (!name) return;
 
-            const maxIdNum = stores.reduce((max, store) => {
-                const num = parseInt(store.id.replace('STORE-', ''));
-                return num > max ? num : max;
-            }, 0);
-            const newId = `STORE-${String(maxIdNum + 1).padStart(2, '0')}`;
-
-            stores.push({ id: newId, name: name });
-            nameInput.value = '';
-
-            renderMasterTables();
-            renderStoreSelector();
-            renderOrderInputForm();
-            updateSummaryData();
-            updateInputStatusStats();
+            stores[index].name = name.trim();
             saveDataToStorage();
-            showToast(`店舗 「${name}」 を追加しました。`, 'success');
+            renderMasterTables();
+            showToast("店舗情報を更新しました。", "success");
         }
 
-        function renameStore(storeId, newName) {
-            const cleanedName = newName.trim();
-            if (!cleanedName) return;
-
-            const store = stores.find(s => s.id === storeId);
-            if (store) {
-                const oldName = store.name;
-                store.name = cleanedName;
-                renderMasterTables();
-                renderStoreSelector();
-                renderOrderInputForm();
-                updateSummaryData();
-                saveDataToStorage();
-                showToast(`店舗名を 「${oldName}」 から 「${cleanedName}」 に変更しました。`, 'success');
-            }
+        function deleteStoreAction(index) {
+            const store = stores[index];
+            if (!confirm(`本当に「${store.name}」を登録マスタから削除しますか？`)) return;
+            stores.splice(index, 1);
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("マスタから店舗を削除しました。", "success");
         }
 
+        // ==================== 🔔 通知UI表示制御 ====================
 
-        // ==================== 🗑️ カスタム削除確認・実行システム ====================
-
-        function requestRemoveItem(itemId) {
-            const item = obentoItems.find(i => i.id === itemId);
-            if (!item) return;
-
-            pendingDeletion.type = 'item';
-            pendingDeletion.id = itemId;
-
-            document.getElementById('confirmTitle').textContent = "お弁当の削除確認";
-            document.getElementById('confirmMessage').innerHTML = `本当にお弁当<strong>「${item.name}」</strong>をマスタから削除しますか？<br><span class="text-xs text-red-500 mt-1 block">※ 削除すると、全店舗に登録されているこのお弁当の注文データもすべて消去されます。</span>`;
-            
-            openConfirmModal();
-        }
-
-        function requestRemoveStore(storeId) {
-            const store = stores.find(s => s.id === storeId);
-            if (!store) return;
-
-            pendingDeletion.type = 'store';
-            pendingDeletion.id = storeId;
-
-            document.getElementById('confirmTitle').textContent = "店舗の削除確認";
-            document.getElementById('confirmMessage').innerHTML = `本当に店舗<strong>「${store.name}」</strong>をマスタから削除しますか？<br><span class="text-xs text-red-500 mt-1 block">※ 削除すると、この店舗に関連するすべての週間注文データが消去されます。</span>`;
-            
-            openConfirmModal();
-        }
-
-        function openConfirmModal() {
-            const modal = document.getElementById('customConfirmModal');
-            modal.classList.remove('hidden');
-        }
-
-        function closeConfirmModal() {
-            const modal = document.getElementById('customConfirmModal');
-            modal.classList.add('hidden');
-            pendingDeletion.type = null;
-            pendingDeletion.id = null;
-        }
-
-        function executeDeletion() {
-            const { type, id } = pendingDeletion;
-
-            if (type === 'item') {
-                const item = obentoItems.find(i => i.id === id);
-                if (item) {
-                    obentoItems = obentoItems.filter(i => i.id !== id);
-                    
-                    for (let week in orders) {
-                        for (let store in orders[week]) {
-                            delete orders[week][store][id];
-                        }
-                    }
-
-                    renderMasterTables();
-                    renderOrderInputForm();
-                    updateSummaryData();
-                    saveDataToStorage();
-                    showToast(`「${item.name}」 をマスタから削除しました。`, 'info');
-                }
-            } else if (type === 'store') {
-                const store = stores.find(s => s.id === id);
-                if (store) {
-                    stores = stores.filter(s => s.id !== id);
-                    
-                    for (let week in orders) {
-                        delete orders[week][id];
-                    }
-
-                    renderMasterTables();
-                    renderStoreSelector();
-                    renderOrderInputForm();
-                    updateSummaryData();
-                    updateInputStatusStats();
-                    saveDataToStorage();
-                    showToast(`「${store.name}」 をマスタから削除しました。`, 'info');
-                }
-            }
-
-            closeConfirmModal();
-        }
-
-
-        // ==================== 8. 通知メッセージ機能 (Toast) ====================
-
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toastMessage');
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
             const toastText = document.getElementById('toastText');
             const toastIcon = document.getElementById('toastIcon');
 
@@ -1902,9 +960,21 @@
                 setTimeout(() => {
                     toast.classList.add('hidden');
                 }, 300);
-            }, 3000);
+            }, 4000);
         }
 
+        // ==================== 🚀 アプリ起動処理 ====================
+
+        window.onload = function() {
+            const now = new Date();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            document.getElementById('currentDateDisplay').innerHTML = `
+                <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
+            `;
+
+            initWeekSelector();       // 週の組み立て（2ヶ月分）
+            initFirebaseSync();       // 🌟クラウドとの自動同期を開始（データ読み込みと画面描画が自動で行われます）
+        };
     </script>
 </body>
 </html>
