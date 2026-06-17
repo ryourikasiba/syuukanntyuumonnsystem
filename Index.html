@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
@@ -545,35 +547,64 @@
         // ==================== 💾 データ保存・読み込み処理 ====================
 
         // localStorageからデータを読み込み
-        function loadAllDataFromStorage() {
+ // ==================== 💾 クラウド（Firebase）保存・自動同期処理 ====================
+
+        // クラウド（Firebase）へデータを丸ごと書き込み
+        function saveDataToStorage() {
             try {
-                const storedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
-                if (storedItems) obentoItems = JSON.parse(storedItems);
-
-                const storedStores = localStorage.getItem(STORAGE_KEY_STORES);
-                if (storedStores) stores = JSON.parse(storedStores);
-
-                const storedOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
-                if (storedOrders) orders = JSON.parse(storedOrders);
-
-                const storedPassword = localStorage.getItem(STORAGE_KEY_PASSWORD);
-                if (storedPassword) masterPassword = storedPassword;
+                docRef.set({
+                    obentoItems: obentoItems,
+                    stores: stores,
+                    orders: orders,
+                    masterPassword: masterPassword
+                })
+                .then(() => {
+                    // 保存が成功した時だけ通知を表示
+                    if (typeof showToast === 'function') {
+                        showToast("クラウドにデータを同期しました！", "success");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Firebaseへの保存エラー:", error);
+                    showToast("クラウドへの同期に失敗しました。", "error");
+                });
             } catch (e) {
-                console.error("データの読み込み中にエラーが発生しました:", e);
-                showToast("保存データの読み込みに失敗しました。ブラウザ設定をご確認ください。", "error");
+                console.error("データの書き込み中にエラーが発生しました:", e);
             }
         }
 
-        // localStorageへデータを書き込み
-        function saveDataToStorage() {
+        // クラウド（Firebase）からデータをリアルタイムに自動同期（読み込み）
+        function initFirebaseSync() {
             try {
-                localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(obentoItems));
-                localStorage.setItem(STORAGE_KEY_STORES, JSON.stringify(stores));
-                localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
-                localStorage.setItem(STORAGE_KEY_PASSWORD, masterPassword);
+                // データベースを監視し、誰かが更新したら自動的にその場で画面が切り替わる設定
+                docRef.onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        
+                        // クラウドから最新データを取得して変数に上書き
+                        orders = data.orders || {};
+                        obentoItems = data.obentoItems || obentoItems;
+                        stores = data.stores || stores;
+                        masterPassword = data.masterPassword || masterPassword;
+                        
+                        // データを読み込んだら画面の全パーツをリアルタイムにリフレッシュ
+                        if (typeof updateStoreFilterOptions === 'function') updateStoreFilterOptions();
+                        if (typeof renderStoreSelector === 'function') renderStoreSelector();
+                        if (typeof renderOrderInputForm === 'function') renderOrderInputForm();
+                        if (typeof renderMasterTables === 'function') renderMasterTables();
+                        if (typeof updateSummaryData === 'function') updateSummaryData();
+                        if (typeof updateInputStatusStats === 'function') updateInputStatusStats();
+                    } else {
+                        // クラウドにまだ一度もデータが保存されていない初回の処理
+                        console.log("クラウドにデータがないため、初期データを保存します。");
+                        saveDataToStorage();
+                    }
+                }, (error) => {
+                    console.error("Firebaseからのデータ同期エラー:", error);
+                    showToast("データの同期に失敗しました。", "error");
+                });
             } catch (e) {
-                console.error("データの書き込み中にエラーが発生しました:", e);
-                showToast("ブラウザへのデータ保存に失敗しました(容量制限など)。", "error");
+                console.error("データ同期の初期化エラー:", e);
             }
         }
 
@@ -754,9 +785,8 @@
                 <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
             `;
 
-            loadAllDataFromStorage(); // まずLocalStorageからデータを呼び出す
-            initWeekSelector();       // 週の組み立て（2ヶ月分）
-            setupDemoDataIfEmpty();   // 完全に初回起動ならダミーデータを生成
+        initWeekSelector();       // 週の組み立て（2ヶ月分）
+initFirebaseSync();       // 🌟クラウドとの自動同期を開始（データ読み込みと画面描画が自動で行われます）
             
             renderStoreSelector();
             renderOrderInputForm();
