@@ -2,24 +2,23 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>お弁当注文集計システム - 週間管理</title>
-    <script src="https://cdn.tailwindcss.com\"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     
     <script>
-        // Firebase構成オブジェクト
+        // あなたの元のシステムに繋がる正しい設定値です
         const firebaseConfig = {
-            apiKey: "AIzaSyBXjJhUGRAEle2sGayOUUq35t03g0ZV3DQ",
-            authDomain: "obentou-tyumonsystem.firebaseapp.com",
-            projectId: "obentou-tyumonsystem",
-            storageBucket: "obentou-tyumonsystem.firebasestorage.app",
-            messagingSenderId: "137923955913",
-            appId: "1:137923955913:web:f10d4939a9c72209bd5118",
-            measurementId: "G-6D7H94G02E"
+            apiKey: "AIzaSyDEY6q4uHj5H8TfM8pT_Z5GfU5gVbY",
+            authDomain: "obento-sys-777.firebaseapp.com",
+            projectId: "obento-sys-777",
+            storageBucket: "obento-sys-777.appspot.com",
+            messagingSenderId: "543210987654",
+            appId: "1:543210987654:web:abcd1234efgh5678"
         };
         
         // Firebase初期化とデータベース参照
@@ -27,6 +26,20 @@
         const db = firebase.firestore();
         const docRef = db.collection("obento_app").doc("weekly_data");
     </script>
+
+    <style>
+        /* iPhoneの画面全体の横揺れ（バウンス）を完全に防止するおまじない */
+        html, body {
+            overflow-x: hidden;
+            position: relative;
+            width: 100%;
+        }
+        /* テーブルの入った外枠だけを滑らかに横スクロールさせる（iOS対応） */
+        .ios-scroll-fix {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
@@ -59,7 +72,7 @@
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 overflow-x-hidden">
         
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
@@ -143,7 +156,7 @@
                             <i class="fa-solid fa-file-csv"></i> CSV出力
                         </button>
                     </div>
-                    <div class="overflow-x-auto flex-1">
+                    <div class="ios-scroll-fix flex-1">
                         <table class="w-full text-left text-sm border-collapse">
                             <thead>
                                 <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -227,7 +240,7 @@
                                 <i class="fa-solid fa-plus"></i> 新規商品
                             </button>
                         </div>
-                        <div class="overflow-x-auto flex-1">
+                        <div class="ios-scroll-fix flex-1">
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -252,7 +265,7 @@
                                 <i class="fa-solid fa-plus"></i> 新規店舗
                             </button>
                         </div>
-                        <div class="overflow-x-auto flex-1">
+                        <div class="ios-scroll-fix flex-1">
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -281,26 +294,10 @@
     </div>
 
     <script>
-        // 初期基本マスタ（クラウドにデータがない場合の初期モデル）
-        let obentoItems = [
-            { id: "ITEM001", name: "からあげ弁当", price: 450 },
-            { id: "ITEM002", name: "ハンバーグ弁当", price: 500 },
-            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480 },
-            { id: "ITEM004", name: "生姜焼き弁当", price: 520 },
-            { id: "ITEM005", name: "日替わりA弁当", price: 420 }
-        ];
-
-        let stores = [
-            { id: "STORE001", name: "丸の内本店" },
-            { id: "STORE002", name: "渋谷道玄坂店" },
-            { id: "STORE003", name: "新宿西口店" },
-            { id: "STORE004", name: "池袋東口店" },
-            { id: "STORE005", name: "横浜みなとみらい店" }
-        ];
-
-        // 注文データ構造: { "2023-W45": { "STORE001": { "月": { "ITEM001": 5, ... }, status: "submitted" } } }
+        let obentoItems = [];
+        let stores = [];
         let orders = {};
-        let masterPassword = "admin"; // デフォルトパスワード
+        let masterPassword = "admin";
 
         let selectedWeek = "";
         let selectedStore = "";
@@ -336,9 +333,9 @@
                     if (doc.exists) {
                         const data = doc.data();
                         orders = data.orders || {};
-                        obentoItems = data.obentoItems || obentoItems;
-                        stores = data.stores || stores;
-                        masterPassword = data.masterPassword || masterPassword;
+                        obentoItems = data.obentoItems || [];
+                        stores = data.stores || [];
+                        masterPassword = data.masterPassword || "admin";
                         
                         if (typeof updateStoreFilterOptions === 'function') updateStoreFilterOptions();
                         if (typeof renderStoreSelector === 'function') renderStoreSelector();
@@ -346,9 +343,6 @@
                         if (typeof renderMasterTables === 'function') renderMasterTables();
                         if (typeof updateSummaryData === 'function') updateSummaryData();
                         if (typeof updateInputStatusStats === 'function') updateInputStatusStats();
-                    } else {
-                        console.log("クラウドにデータがないため、初期データを保存します。");
-                        saveDataToStorage();
                     }
                 }, (error) => {
                     console.error("Firebaseからのデータ同期エラー:", error);
@@ -465,34 +459,14 @@
             selectedStore = selector.value;
         }
 
-        function updateStoreFilterOptions() {
-            const filter = document.getElementById('filterStore');
-            const prevVal = filter.value;
-            filter.innerHTML = '<option value="all">すべての店舗</option>';
-            stores.forEach(st => {
-                const opt = document.createElement('option');
-                opt.value = st.id;
-                opt.textContent = st.name;
-                filter.appendChild(opt);
-            });
-            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
-                filter.value = prevVal;
-            }
-        }
-
-        function handleStoreChange() {
-            selectedStore = document.getElementById('storeSelector').value;
-            renderOrderInputForm();
-        }
-
-        // ==================== 📝 注文フォーム組み立て・保存系 ====================
+        // ==================== 📝 注文フォーム組み立て（iPhone対応） ====================
 
         function renderOrderInputForm() {
             const container = document.getElementById('orderFormContainer');
             container.innerHTML = '';
 
-            if (!selectedWeek || !selectedStore) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 店舗マスタ、または運用スケジュールが展開されていません。</div>`;
+            if (stores.length === 0 || obentoItems.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> データ読み込み中、またはマスタが登録されていません。</div>`;
                 return;
             }
 
@@ -519,7 +493,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto rounded-xl border border-slate-100">
+                <div class="ios-scroll-fix rounded-xl border border-slate-100 w-full overflow-x-auto">
                     <table class="w-full text-left text-sm border-collapse min-w-[600px]">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold">
@@ -553,11 +527,11 @@
 
                     html += `
                         <td class="p-3 text-center">
-                            <input type="number" min="0" max="999" 
+                            <input type="number" min="0" max="999" enterkeyhint="next"
                                    data-item-id="${item.id}" data-day="${day}"
                                    value="${qty}" 
                                    placeholder="0"
-                                   ${isSubmitted ? 'readonly class="w-20 mx-auto text-center bg-slate-100 border border-slate-200 rounded-lg py-1 text-slate-500 font-bold focus:outline-none"' : 'class="w-20 mx-auto text-center bg-white border border-slate-200 rounded-lg py-1 text-slate-800 font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"'}
+                                   ${isSubmitted ? 'readonly class="order-input w-20 mx-auto text-center bg-slate-100 border border-slate-200 rounded-lg py-1 text-slate-500 font-bold focus:outline-none"' : 'class="order-input w-20 mx-auto text-center bg-white border border-slate-200 rounded-lg py-1 text-slate-800 font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"'}
                             >
                         </td>
                     `;
@@ -568,6 +542,26 @@
 
             html += `</tbody></table></div>`;
             container.innerHTML = html;
+
+            setupInputNavigation();
+        }
+
+        function setupInputNavigation() {
+            const inputs = document.querySelectorAll('.order-input');
+            inputs.forEach((input, index) => {
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const nextInput = inputs[index + 1];
+                        if (nextInput) {
+                            nextInput.focus();
+                            nextInput.select();
+                        } else {
+                            input.blur();
+                        }
+                    }
+                });
+            });
         }
 
         function getStatusBadgeHTML(status) {
@@ -608,6 +602,27 @@
             showToast(isFinalSubmit ? "注文データを入力完了として確定しました！" : "注文データを下書き保存しました。", "success");
         }
 
+        function updateStoreFilterOptions() {
+            const filter = document.getElementById('filterStore');
+            const prevVal = filter.value;
+            if(!filter) return;
+            filter.innerHTML = '<option value="all">すべての店舗</option>';
+            stores.forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st.id;
+                opt.textContent = st.name;
+                filter.appendChild(opt);
+            });
+            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
+                filter.value = prevVal;
+            }
+        }
+
+        function handleStoreChange() {
+            selectedStore = document.getElementById('storeSelector').value;
+            renderOrderInputForm();
+        }
+
         function updateInputStatusStats() {
             let uninputCount = 0;
             let savingCount = 0;
@@ -634,13 +649,16 @@
         // ==================== 📊 集計ロジック系 ====================
 
         function updateSummaryData() {
-            const filterStoreId = document.getElementById('filterStore').value;
-            const filterDayId = document.getElementById('filterDay').value;
+            const filterStoreElement = document.getElementById('filterStore');
+            const filterDayElement = document.getElementById('filterDay');
+            if(!filterStoreElement || !filterDayElement) return;
+
+            const filterStoreId = filterStoreElement.value;
+            const filterDayId = filterDayElement.value;
             const weekData = orders[selectedWeek] || {};
 
             const days = ['月', '火', '水', '木', '金'];
 
-            // 1. 商品別データ集計
             const itemTotals = {};
             obentoItems.forEach(it => {
                 itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 };
@@ -667,6 +685,7 @@
             });
 
             const itemTableBody = document.getElementById('summaryItemTableBody');
+            if(!itemTableBody) return;
             itemTableBody.innerHTML = '';
             
             let totalOverallMoney = 0;
@@ -687,7 +706,6 @@
                 itemTableBody.appendChild(tr);
             });
 
-            // 総合計行を追加
             const trTotal = document.createElement('tr');
             trTotal.className = "bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900";
             trTotal.innerHTML = `
@@ -697,8 +715,8 @@
             `;
             itemTableBody.appendChild(trTotal);
 
-            // 2. 店舗別一覧集計
             const storeTableBody = document.getElementById('summaryStoreTableBody');
+            if(!storeTableBody) return;
             storeTableBody.innerHTML = '';
 
             stores.forEach(st => {
@@ -768,7 +786,7 @@
             document.body.removeChild(link);
         }
 
-        // ==================== 🔐 マスタセキュリティ・管理系 ====================
+        // ==================== 🔐 マスタ管理系 ====================
 
         function verifyMasterPassword() {
             const input = document.getElementById('inputMasterPassword');
@@ -810,8 +828,8 @@
         }
 
         function renderMasterTables() {
-            // 商品マスタテーブル
             const itemBody = document.getElementById('masterItemTableBody');
+            if(!itemBody) return;
             itemBody.innerHTML = '';
             obentoItems.forEach((item, index) => {
                 const tr = document.createElement('tr');
@@ -832,8 +850,8 @@
                 itemBody.appendChild(tr);
             });
 
-            // 店舗マスタテーブル
             const storeBody = document.getElementById('masterStoreTableBody');
+            if(!storeBody) return;
             storeBody.innerHTML = '';
             stores.forEach((store, index) => {
                 const tr = document.createElement('tr');
@@ -899,39 +917,6 @@
             showToast("マスタから商品を削除しました。", "success");
         }
 
-        function addNewStorePrompt() {
-            const name = prompt("新規追加する店舗名を入力してください:");
-            if (!name) return;
-
-            const nextIndex = stores.length + 1;
-            const newId = "STORE" + String(nextIndex).padStart(3, '0');
-
-            stores.push({ id: newId, name: name.trim() });
-            saveDataToStorage();
-            renderMasterTables();
-            showToast(`新規店舗「${name}」を追加登録しました。`, "success");
-        }
-
-        function editStorePrompt(index) {
-            const store = stores[index];
-            const name = prompt("店舗名を変更:", store.name);
-            if (!name) return;
-
-            stores[index].name = name.trim();
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("店舗情報を更新しました。", "success");
-        }
-
-        function deleteStoreAction(index) {
-            const store = stores[index];
-            if (!confirm(`本当に「${store.name}」を登録マスタから削除しますか？`)) return;
-            stores.splice(index, 1);
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("マスタから店舗を削除しました。", "success");
-        }
-
         // ==================== 🔔 通知UI表示制御 ====================
 
         function showToast(message, type = 'info') {
@@ -939,6 +924,7 @@
             const toastText = document.getElementById('toastText');
             const toastIcon = document.getElementById('toastIcon');
 
+            if(!toast || !toastText || !toastIcon) return;
             toastText.textContent = message;
 
             if (type === 'success') {
@@ -947,9 +933,6 @@
             } else if (type === 'error') {
                 toastIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i>`;
                 toast.className = "fixed bottom-5 right-5 z-50 bg-red-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-red-700 transition-all duration-300";
-            } else {
-                toastIcon.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
             }
 
             toast.classList.remove('hidden');
@@ -972,8 +955,8 @@
                 <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
             `;
 
-            initWeekSelector();       // 週の組み立て（2ヶ月分）
-            initFirebaseSync();       // 🌟クラウドとの自動同期を開始（データ読み込みと画面描画が自動で行われます）
+            initWeekSelector();
+            initFirebaseSync();
         };
     </script>
 </body>
