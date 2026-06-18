@@ -2,16 +2,16 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>お弁当注文集計システム - 週間管理</title>
-    <script src="https://cdn.tailwindcss.com\"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     
     <script>
-        // Firebase構成オブジェクト
+        // あなたのプロジェクト用の正しい設定値です
         const firebaseConfig = {
             apiKey: "AIzaSyBXjJhUGRAEle2sGayOUUq35t03g0ZV3DQ",
             authDomain: "obentou-tyumonsystem.firebaseapp.com",
@@ -27,6 +27,20 @@
         const db = firebase.firestore();
         const docRef = db.collection("obento_app").doc("weekly_data");
     </script>
+
+    <style>
+        /* iPhoneの画面全体の横揺れ（バウンス）を完全に防止するおまじない */
+        html, body {
+            overflow-x: hidden;
+            position: relative;
+            width: 100%;
+        }
+        /* テーブルの入った外枠だけを滑らかに横スクロールさせる（iOS対応） */
+        .ios-scroll-fix {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
@@ -59,7 +73,7 @@
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 overflow-x-hidden">
         
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
@@ -143,7 +157,7 @@
                             <i class="fa-solid fa-file-csv"></i> CSV出力
                         </button>
                     </div>
-                    <div class="overflow-x-auto flex-1">
+                    <div class="ios-scroll-fix flex-1">
                         <table class="w-full text-left text-sm border-collapse">
                             <thead>
                                 <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -227,7 +241,7 @@
                                 <i class="fa-solid fa-plus"></i> 新規商品
                             </button>
                         </div>
-                        <div class="overflow-x-auto flex-1">
+                        <div class="ios-scroll-fix flex-1">
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -252,7 +266,7 @@
                                 <i class="fa-solid fa-plus"></i> 新規店舗
                             </button>
                         </div>
-                        <div class="overflow-x-auto flex-1">
+                        <div class="ios-scroll-fix flex-1">
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -298,9 +312,8 @@
             { id: "STORE005", name: "横浜みなとみらい店" }
         ];
 
-        // 注文データ構造: { "2023-W45": { "STORE001": { "月": { "ITEM001": 5, ... }, status: "submitted" } } }
         let orders = {};
-        let masterPassword = "admin"; // デフォルトパスワード
+        let masterPassword = "admin";
 
         let selectedWeek = "";
         let selectedStore = "";
@@ -432,549 +445,4 @@
             }
         }
 
-        function getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-            return weekNo;
-        }
-
-        function handleWeekChange() {
-            selectedWeek = document.getElementById('weekSelector').value;
-            renderOrderInputForm();
-            updateSummaryData();
-            updateInputStatusStats();
-        }
-
-        function renderStoreSelector() {
-            const selector = document.getElementById('storeSelector');
-            const prevSelected = selector.value;
-            selector.innerHTML = '';
-
-            stores.forEach(st => {
-                const opt = document.createElement('option');
-                opt.value = st.id;
-                opt.textContent = st.name;
-                selector.appendChild(opt);
-            });
-
-            if (stores.some(s => s.id === prevSelected)) {
-                selector.value = prevSelected;
-            }
-            selectedStore = selector.value;
-        }
-
-        function updateStoreFilterOptions() {
-            const filter = document.getElementById('filterStore');
-            const prevVal = filter.value;
-            filter.innerHTML = '<option value="all">すべての店舗</option>';
-            stores.forEach(st => {
-                const opt = document.createElement('option');
-                opt.value = st.id;
-                opt.textContent = st.name;
-                filter.appendChild(opt);
-            });
-            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
-                filter.value = prevVal;
-            }
-        }
-
-        function handleStoreChange() {
-            selectedStore = document.getElementById('storeSelector').value;
-            renderOrderInputForm();
-        }
-
-        // ==================== 📝 注文フォーム組み立て・保存系 ====================
-
-        function renderOrderInputForm() {
-            const container = document.getElementById('orderFormContainer');
-            container.innerHTML = '';
-
-            if (!selectedWeek || !selectedStore) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 店舗マスタ、または運用スケジュールが展開されていません。</div>`;
-                return;
-            }
-
-            if (!orders[selectedWeek]) orders[selectedWeek] = {};
-            if (!orders[selectedWeek][selectedStore]) {
-                orders[selectedWeek][selectedStore] = { status: "uninput" };
-            }
-
-            const currentStoreData = orders[selectedWeek][selectedStore];
-            const isSubmitted = currentStoreData.status === 'submitted';
-
-            let html = `
-                <div class="mb-4 flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-slate-500">現在のステータス:</span>
-                        ${getStatusBadgeHTML(currentStoreData.status)}
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="saveOrderData(false)" ${isSubmitted ? 'disabled' : ''} class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-all">
-                            <i class="fa-solid fa-floppy-disk"></i> 一時保存(下書き)
-                        </button>
-                        <button onclick="saveOrderData(true)" class="bg-green-600 hover:bg-green-700 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-all">
-                            <i class="fa-solid fa-circle-check"></i> 入力完了(確定)
-                        </button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto rounded-xl border border-slate-100">
-                    <table class="w-full text-left text-sm border-collapse min-w-[600px]">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold">
-                                <th class="p-3 pl-4 w-48">商品名 / 単価</th>
-                                <th class="p-3 text-center bg-red-50/20 text-red-900/70">月曜日</th>
-                                <th class="p-3 text-center bg-amber-50/20 text-amber-900/70">火曜日</th>
-                                <th class="p-3 text-center bg-green-50/20 text-green-900/70">水曜日</th>
-                                <th class="p-3 text-center bg-blue-50/20 text-blue-900/70">木曜日</th>
-                                <th class="p-3 text-center bg-purple-50/20 text-purple-900/70">金曜日</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
-            `;
-
-            const days = ['月', '火', '水', '木', '金'];
-
-            obentoItems.forEach(item => {
-                html += `
-                    <tr class="hover:bg-slate-50/50 transition-colors">
-                        <td class="p-3 pl-4">
-                            <div class="font-bold text-slate-800 text-sm">${item.name}</div>
-                            <div class="text-xs text-slate-400 font-semibold">¥${item.price.toLocaleString()}</div>
-                        </td>
-                `;
-
-                days.forEach(day => {
-                    let qty = "";
-                    if (currentStoreData[day] && currentStoreData[day][item.id] !== undefined) {
-                        qty = currentStoreData[day][item.id];
-                    }
-
-                    html += `
-                        <td class="p-3 text-center">
-                            <input type="number" min="0" max="999" 
-                                   data-item-id="${item.id}" data-day="${day}"
-                                   value="${qty}" 
-                                   placeholder="0"
-                                   ${isSubmitted ? 'readonly class="w-20 mx-auto text-center bg-slate-100 border border-slate-200 rounded-lg py-1 text-slate-500 font-bold focus:outline-none"' : 'class="w-20 mx-auto text-center bg-white border border-slate-200 rounded-lg py-1 text-slate-800 font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"'}
-                            >
-                        </td>
-                    `;
-                });
-
-                html += `</tr>`;
-            });
-
-            html += `</tbody></table></div>`;
-            container.innerHTML = html;
-        }
-
-        function getStatusBadgeHTML(status) {
-            if (status === 'submitted') return `<span class="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-0.5 rounded-md border border-green-200 flex items-center gap-0.5"><i class="fa-solid fa-lock text-[10px]"></i> 入力完了</span>`;
-            if (status === 'saving') return `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5"><i class="fa-solid fa-pen text-[10px]"></i> 下書き保存</span>`;
-            return `<span class="bg-slate-100 text-slate-500 text-xs font-bold px-2.5 py-0.5 rounded-md border border-slate-200 flex items-center gap-0.5"><i class="fa-solid fa-circle-minus text-[10px]"></i> 未入力</span>`;
-        }
-
-        function saveOrderData(isFinalSubmit) {
-            if (!orders[selectedWeek]) orders[selectedWeek] = {};
-            if (!orders[selectedWeek][selectedStore]) orders[selectedWeek][selectedStore] = {};
-
-            const container = document.getElementById('orderFormContainer');
-            const inputs = container.querySelectorAll('input[type="number"]');
-
-            const days = ['月', '火', '水', '木', '金'];
-            days.forEach(day => {
-                if (!orders[selectedWeek][selectedStore][day]) orders[selectedWeek][selectedStore][day] = {};
-            });
-
-            inputs.forEach(input => {
-                const itemId = input.getAttribute('data-item-id');
-                const day = input.getAttribute('data-day');
-                const val = parseInt(input.value, 10);
-
-                if (!isNaN(val) && val >= 0) {
-                    orders[selectedWeek][selectedStore][day][itemId] = val;
-                } else {
-                    orders[selectedWeek][selectedStore][day][itemId] = 0;
-                }
-            });
-
-            orders[selectedWeek][selectedStore].status = isFinalSubmit ? "submitted" : "saving";
-
-            saveDataToStorage();
-            renderOrderInputForm();
-            updateInputStatusStats();
-            showToast(isFinalSubmit ? "注文データを入力完了として確定しました！" : "注文データを下書き保存しました。", "success");
-        }
-
-        function updateInputStatusStats() {
-            let uninputCount = 0;
-            let savingCount = 0;
-            let submittedCount = 0;
-
-            const weekData = orders[selectedWeek] || {};
-
-            stores.forEach(st => {
-                const stData = weekData[st.id];
-                if (!stData || stData.status === 'uninput') {
-                    uninputCount++;
-                } else if (stData.status === 'saving') {
-                    savingCount++;
-                } else if (stData.status === 'submitted') {
-                    submittedCount++;
-                }
-            });
-
-            document.getElementById('statUninput').textContent = uninputCount;
-            document.getElementById('statSaving').textContent = savingCount;
-            document.getElementById('statSubmitted').textContent = submittedCount;
-        }
-
-        // ==================== 📊 集計ロジック系 ====================
-
-        function updateSummaryData() {
-            const filterStoreId = document.getElementById('filterStore').value;
-            const filterDayId = document.getElementById('filterDay').value;
-            const weekData = orders[selectedWeek] || {};
-
-            const days = ['月', '火', '水', '木', '金'];
-
-            // 1. 商品別データ集計
-            const itemTotals = {};
-            obentoItems.forEach(it => {
-                itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 };
-            });
-
-            stores.forEach(st => {
-                if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
-
-                const stData = weekData[st.id];
-                if (!stData) return;
-
-                days.forEach(day => {
-                    if (filterDayId !== 'all' && day !== filterDayId) return;
-
-                    const dayData = stData[day];
-                    if (!dayData) return;
-
-                    obentoItems.forEach(it => {
-                        if (dayData[it.id] !== undefined) {
-                            itemTotals[it.id].qty += dayData[it.id];
-                        }
-                    });
-                });
-            });
-
-            const itemTableBody = document.getElementById('summaryItemTableBody');
-            itemTableBody.innerHTML = '';
-            
-            let totalOverallMoney = 0;
-
-            obentoItems.forEach(it => {
-                const record = itemTotals[it.id];
-                const money = record.qty * record.price;
-                totalOverallMoney += money;
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5 font-bold text-slate-800">${record.name}</td>
-                    <td class="p-3 text-right text-xs text-slate-400 font-semibold">¥${record.price.toLocaleString()}</td>
-                    <td class="p-3 text-center bg-blue-50/30 text-blue-700 font-bold text-base">${record.qty.toLocaleString()}</td>
-                    <td class="p-3 text-right pr-5 text-slate-800 font-bold">¥${money.toLocaleString()}</td>
-                `;
-                itemTableBody.appendChild(tr);
-            });
-
-            // 総合計行を追加
-            const trTotal = document.createElement('tr');
-            trTotal.className = "bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900";
-            trTotal.innerHTML = `
-                <td class="p-4 pl-5 text-sm" colspan="2">合計金額総合計 (税込)</td>
-                <td class="p-4 text-center text-slate-400 font-medium text-xs">ー</td>
-                <td class="p-4 text-right pr-5 text-base text-blue-700">¥${totalOverallMoney.toLocaleString()}</td>
-            `;
-            itemTableBody.appendChild(trTotal);
-
-            // 2. 店舗別一覧集計
-            const storeTableBody = document.getElementById('summaryStoreTableBody');
-            storeTableBody.innerHTML = '';
-
-            stores.forEach(st => {
-                const stData = weekData[st.id];
-                const status = stData ? stData.status : 'uninput';
-                
-                let storeMoney = 0;
-                if (stData) {
-                    days.forEach(day => {
-                        const dayData = stData[day];
-                        if (!dayData) return;
-                        obentoItems.forEach(it => {
-                            if (dayData[it.id] !== undefined) {
-                                storeMoney += dayData[it.id] * it.price;
-                            }
-                        });
-                    });
-                }
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5 font-bold text-slate-800 text-xs">${st.name}</td>
-                    <td class="p-3 text-center">${getStatusBadgeHTML(status)}</td>
-                    <td class="p-3 text-right pr-5 font-bold text-slate-700 text-xs">¥${storeMoney.toLocaleString()}</td>
-                `;
-                storeTableBody.appendChild(tr);
-            });
-        }
-
-        function exportToCSV() {
-            const filterStoreId = document.getElementById('filterStore').value;
-            const filterDayId = document.getElementById('filterDay').value;
-            const weekData = orders[selectedWeek] || {};
-            const days = ['月', '火', '水', '木', '金'];
-
-            let csvContent = "\uFEFF商品名,単価,曜日,店舗名,発注数量,小計\n";
-
-            obentoItems.forEach(it => {
-                stores.forEach(st => {
-                    if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
-                    
-                    const stData = weekData[st.id];
-                    if (!stData) return;
-
-                    days.forEach(day => {
-                        if (filterDayId !== 'all' && day !== filterDayId) return;
-
-                        const dayData = stData[day];
-                        if (!dayData || dayData[it.id] === undefined || dayData[it.id] === 0) return;
-
-                        const qty = dayData[it.id];
-                        const subtotal = qty * it.price;
-                        
-                        csvContent += `"${it.name}",${it.price},"${day}曜日","${st.name}",${qty},${subtotal}\n`;
-                    });
-                });
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `お弁当注文集計_${selectedWeek}_店舗-${filterStoreId}_曜日-${filterDayId}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // ==================== 🔐 マスタセキュリティ・管理系 ====================
-
-        function verifyMasterPassword() {
-            const input = document.getElementById('inputMasterPassword');
-            if (input.value === masterPassword) {
-                isMasterAuthenticated = true;
-                document.getElementById('masterPasswordLock').classList.add('hidden');
-                document.getElementById('masterConfigContent').classList.remove('hidden');
-                renderMasterTables();
-                showToast("マスターマスタ認証に成功しました。", "success");
-            } else {
-                showToast("パスワードが一致しません。", "error");
-                input.value = "";
-            }
-        }
-
-        function changeMasterPasswordPrompt() {
-            const newPass = prompt("新しいマスターパスワードを入力してください:", masterPassword);
-            if (newPass === null) return;
-            if (newPass.trim() === "") {
-                showToast("空のパスワードは設定できません。", "error");
-                return;
-            }
-            masterPassword = newPass.trim();
-            saveDataToStorage();
-            showToast("マスターパスワードを変更し、クラウドに保存しました。", "success");
-        }
-
-        function clearAllSystemData() {
-            if (!confirm("⚠️警告: クラウド上のすべての注文履歴、商品マスタ、店舗マスタが初期化されます。本当によろしいですか？")) return;
-            if (prompt("確認のため『初期化』と入力してください:") !== "初期化") {
-                showToast("処理がキャンセルされました。", "info");
-                return;
-            }
-
-            orders = {};
-            saveDataToStorage();
-            showToast("システムデータをリセットしました。", "success");
-            handleWeekChange();
-        }
-
-        function renderMasterTables() {
-            // 商品マスタテーブル
-            const itemBody = document.getElementById('masterItemTableBody');
-            itemBody.innerHTML = '';
-            obentoItems.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5">
-                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${item.id}</div>
-                        <div class="text-sm font-bold text-slate-800">${item.name}</div>
-                    </td>
-                    <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
-                    <td class="p-3 text-center pr-5">
-                        <div class="flex gap-1 justify-center">
-                            <button onclick="editItemPrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
-                `;
-                itemBody.appendChild(tr);
-            });
-
-            // 店舗マスタテーブル
-            const storeBody = document.getElementById('masterStoreTableBody');
-            storeBody.innerHTML = '';
-            stores.forEach((store, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5">
-                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${store.id}</div>
-                        <div class="text-sm font-bold text-slate-800">${store.name}</div>
-                    </td>
-                    <td class="p-3 text-center pr-5">
-                        <div class="flex gap-1 justify-center">
-                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
-                `;
-                storeBody.appendChild(tr);
-            });
-        }
-
-        function addNewItemPrompt() {
-            const name = prompt("新規追加するお弁当の商品名を入力してください:");
-            if (!name) return;
-            const priceStr = prompt(`「${name}」の税込単価(半角数字)を入力してください:`, "500");
-            if (!priceStr) return;
-            const price = parseInt(priceStr, 10);
-            if (isNaN(price) || price < 0) {
-                showToast("不正な金額が入力されました。", "error");
-                return;
-            }
-
-            const nextIndex = obentoItems.length + 1;
-            const newId = "ITEM" + String(nextIndex).padStart(3, '0');
-
-            obentoItems.push({ id: newId, name: name.trim(), price: price });
-            saveDataToStorage();
-            renderMasterTables();
-            showToast(`新規商品「${name}」を追加登録しました。`, "success");
-        }
-
-        function editItemPrompt(index) {
-            const item = obentoItems[index];
-            const name = prompt("商品名を変更:", item.name);
-            if (!name) return;
-            const priceStr = prompt("価格を変更(半角数字):", item.price);
-            if (!priceStr) return;
-            const price = parseInt(priceStr, 10);
-            if (isNaN(price) || price < 0) return;
-
-            obentoItems[index].name = name.trim();
-            obentoItems[index].price = price;
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("商品情報を更新しました。", "success");
-        }
-
-        function deleteItemAction(index) {
-            const item = obentoItems[index];
-            if (!confirm(`本当に「${item.name}」をマスタから削除しますか？\n(注: 過去の注文集計データ等で数値の歪みが出る場合があります)`)) return;
-            obentoItems.splice(index, 1);
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("マスタから商品を削除しました。", "success");
-        }
-
-        function addNewStorePrompt() {
-            const name = prompt("新規追加する店舗名を入力してください:");
-            if (!name) return;
-
-            const nextIndex = stores.length + 1;
-            const newId = "STORE" + String(nextIndex).padStart(3, '0');
-
-            stores.push({ id: newId, name: name.trim() });
-            saveDataToStorage();
-            renderMasterTables();
-            showToast(`新規店舗「${name}」を追加登録しました。`, "success");
-        }
-
-        function editStorePrompt(index) {
-            const store = stores[index];
-            const name = prompt("店舗名を変更:", store.name);
-            if (!name) return;
-
-            stores[index].name = name.trim();
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("店舗情報を更新しました。", "success");
-        }
-
-        function deleteStoreAction(index) {
-            const store = stores[index];
-            if (!confirm(`本当に「${store.name}」を登録マスタから削除しますか？`)) return;
-            stores.splice(index, 1);
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("マスタから店舗を削除しました。", "success");
-        }
-
-        // ==================== 🔔 通知UI表示制御 ====================
-
-        function showToast(message, type = 'info') {
-            const toast = document.getElementById('toast');
-            const toastText = document.getElementById('toastText');
-            const toastIcon = document.getElementById('toastIcon');
-
-            toastText.textContent = message;
-
-            if (type === 'success') {
-                toastIcon.innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
-            } else if (type === 'error') {
-                toastIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-red-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-red-700 transition-all duration-300";
-            } else {
-                toastIcon.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
-            }
-
-            toast.classList.remove('hidden');
-            toast.style.opacity = "1";
-
-            setTimeout(() => {
-                toast.style.opacity = "0";
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                }, 300);
-            }, 4000);
-        }
-
-        // ==================== 🚀 アプリ起動処理 ====================
-
-        window.onload = function() {
-            const now = new Date();
-            const days = ['日', '月', '火', '水', '木', '金', '土'];
-            document.getElementById('currentDateDisplay').innerHTML = `
-                <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
-            `;
-
-            initWeekSelector();       // 週の組み立て（2ヶ月分）
-            initFirebaseSync();       // 🌟クラウドとの自動同期を開始（データ読み込みと画面描画が自動で行われます）
-        };
-    </script>
-</body>
-</html>
+        function getWeekNumber(d)
