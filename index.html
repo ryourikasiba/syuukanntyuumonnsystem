@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>お弁当注文集計システム - 週間管理</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com\"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -27,20 +27,6 @@
         const db = firebase.firestore();
         const docRef = db.collection("obento_app").doc("weekly_data");
     </script>
-
-    <style>
-        /* iPhoneの画面全体の横揺れ（バウンス）を完全に防止するおまじない */
-        html, body {
-            overflow-x: hidden;
-            position: relative;
-            width: 100%;
-        }
-        /* テーブルの入った外枠だけを滑らかに横スクロールさせる（iOS対応） */
-        .ios-scroll-fix {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
@@ -73,7 +59,7 @@
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 overflow-x-hidden">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
         
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
@@ -157,7 +143,7 @@
                             <i class="fa-solid fa-file-csv"></i> CSV出力
                         </button>
                     </div>
-                    <div class="ios-scroll-fix flex-1">
+                    <div class="overflow-x-auto flex-1">
                         <table class="w-full text-left text-sm border-collapse">
                             <thead>
                                 <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -241,7 +227,7 @@
                                 <i class="fa-solid fa-plus"></i> 新規商品
                             </button>
                         </div>
-                        <div class="ios-scroll-fix flex-1">
+                        <div class="overflow-x-auto flex-1">
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -266,7 +252,7 @@
                                 <i class="fa-solid fa-plus"></i> 新規店舗
                             </button>
                         </div>
-                        <div class="ios-scroll-fix flex-1">
+                        <div class="overflow-x-auto flex-1">
                             <table class="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
@@ -312,8 +298,9 @@
             { id: "STORE005", name: "横浜みなとみらい店" }
         ];
 
+        // 注文データ構造: { "2023-W45": { "STORE001": { "月": { "ITEM001": 5, ... }, status: "submitted" } } }
         let orders = {};
-        let masterPassword = "admin";
+        let masterPassword = "admin"; // デフォルトパスワード
 
         let selectedWeek = "";
         let selectedStore = "";
@@ -478,7 +465,27 @@
             selectedStore = selector.value;
         }
 
-        // ==================== 📝 注文フォーム組み立て（iPhoneエンター対応追加） ====================
+        function updateStoreFilterOptions() {
+            const filter = document.getElementById('filterStore');
+            const prevVal = filter.value;
+            filter.innerHTML = '<option value="all">すべての店舗</option>';
+            stores.forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st.id;
+                opt.textContent = st.name;
+                filter.appendChild(opt);
+            });
+            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
+                filter.value = prevVal;
+            }
+        }
+
+        function handleStoreChange() {
+            selectedStore = document.getElementById('storeSelector').value;
+            renderOrderInputForm();
+        }
+
+        // ==================== 📝 注文フォーム組み立て・保存系 ====================
 
         function renderOrderInputForm() {
             const container = document.getElementById('orderFormContainer');
@@ -512,7 +519,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="ios-scroll-fix rounded-xl border border-slate-100 w-full overflow-x-auto">
+                <div class="overflow-x-auto rounded-xl border border-slate-100">
                     <table class="w-full text-left text-sm border-collapse min-w-[600px]">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold">
@@ -546,11 +553,11 @@
 
                     html += `
                         <td class="p-3 text-center">
-                            <input type="number" min="0" max="999" enterkeyhint="next"
+                            <input type="number" min="0" max="999" 
                                    data-item-id="${item.id}" data-day="${day}"
                                    value="${qty}" 
                                    placeholder="0"
-                                   ${isSubmitted ? 'readonly class="order-input w-20 mx-auto text-center bg-slate-100 border border-slate-200 rounded-lg py-1 text-slate-500 font-bold focus:outline-none"' : 'class="order-input w-20 mx-auto text-center bg-white border border-slate-200 rounded-lg py-1 text-slate-800 font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"'}
+                                   ${isSubmitted ? 'readonly class="w-20 mx-auto text-center bg-slate-100 border border-slate-200 rounded-lg py-1 text-slate-500 font-bold focus:outline-none"' : 'class="w-20 mx-auto text-center bg-white border border-slate-200 rounded-lg py-1 text-slate-800 font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500"'}
                             >
                         </td>
                     `;
@@ -561,27 +568,6 @@
 
             html += `</tbody></table></div>`;
             container.innerHTML = html;
-
-            // 💡 iPhone・スマホ用にエンターキー（Next）で次の入力項目へ移動するイベントを設定
-            setupInputNavigation();
-        }
-
-        function setupInputNavigation() {
-            const inputs = document.querySelectorAll('.order-input');
-            inputs.forEach((input, index) => {
-                input.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault(); // 本来のフォーム送信を防ぐ
-                        const nextInput = inputs[index + 1];
-                        if (nextInput) {
-                            nextInput.focus(); // 次の入力欄へ移動
-                            nextInput.select(); // 入力されている文字を選択状態にする
-                        } else {
-                            input.blur(); // 最後の項目の場合はキーボードを閉じる
-                        }
-                    }
-                });
-            });
         }
 
         function getStatusBadgeHTML(status) {
@@ -622,27 +608,6 @@
             showToast(isFinalSubmit ? "注文データを入力完了として確定しました！" : "注文データを下書き保存しました。", "success");
         }
 
-        function updateStoreFilterOptions() {
-            const filter = document.getElementById('filterStore');
-            const prevVal = filter.value;
-            if(!filter) return;
-            filter.innerHTML = '<option value="all">すべての店舗</option>';
-            stores.forEach(st => {
-                const opt = document.createElement('option');
-                opt.value = st.id;
-                opt.textContent = st.name;
-                filter.appendChild(opt);
-            });
-            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
-                filter.value = prevVal;
-            }
-        }
-
-        function handleStoreChange() {
-            selectedStore = document.getElementById('storeSelector').value;
-            renderOrderInputForm();
-        }
-
         function updateInputStatusStats() {
             let uninputCount = 0;
             let savingCount = 0;
@@ -669,16 +634,13 @@
         // ==================== 📊 集計ロジック系 ====================
 
         function updateSummaryData() {
-            const filterStoreElement = document.getElementById('filterStore');
-            const filterDayElement = document.getElementById('filterDay');
-            if(!filterStoreElement || !filterDayElement) return;
-
-            const filterStoreId = filterStoreElement.value;
-            const filterDayId = filterDayElement.value;
+            const filterStoreId = document.getElementById('filterStore').value;
+            const filterDayId = document.getElementById('filterDay').value;
             const weekData = orders[selectedWeek] || {};
 
             const days = ['月', '火', '水', '木', '金'];
 
+            // 1. 商品別データ集計
             const itemTotals = {};
             obentoItems.forEach(it => {
                 itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 };
@@ -705,7 +667,6 @@
             });
 
             const itemTableBody = document.getElementById('summaryItemTableBody');
-            if(!itemTableBody) return;
             itemTableBody.innerHTML = '';
             
             let totalOverallMoney = 0;
@@ -726,6 +687,7 @@
                 itemTableBody.appendChild(tr);
             });
 
+            // 総合計行を追加
             const trTotal = document.createElement('tr');
             trTotal.className = "bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900";
             trTotal.innerHTML = `
@@ -735,8 +697,8 @@
             `;
             itemTableBody.appendChild(trTotal);
 
+            // 2. 店舗別一覧集計
             const storeTableBody = document.getElementById('summaryStoreTableBody');
-            if(!storeTableBody) return;
             storeTableBody.innerHTML = '';
 
             stores.forEach(st => {
@@ -787,3 +749,232 @@
 
                         const dayData = stData[day];
                         if (!dayData || dayData[it.id] === undefined || dayData[it.id] === 0) return;
+
+                        const qty = dayData[it.id];
+                        const subtotal = qty * it.price;
+                        
+                        csvContent += `"${it.name}",${it.price},"${day}曜日","${st.name}",${qty},${subtotal}\n`;
+                    });
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `お弁当注文集計_${selectedWeek}_店舗-${filterStoreId}_曜日-${filterDayId}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ==================== 🔐 マスタセキュリティ・管理系 ====================
+
+        function verifyMasterPassword() {
+            const input = document.getElementById('inputMasterPassword');
+            if (input.value === masterPassword) {
+                isMasterAuthenticated = true;
+                document.getElementById('masterPasswordLock').classList.add('hidden');
+                document.getElementById('masterConfigContent').classList.remove('hidden');
+                renderMasterTables();
+                showToast("マスターマスタ認証に成功しました。", "success");
+            } else {
+                showToast("パスワードが一致しません。", "error");
+                input.value = "";
+            }
+        }
+
+        function changeMasterPasswordPrompt() {
+            const newPass = prompt("新しいマスターパスワードを入力してください:", masterPassword);
+            if (newPass === null) return;
+            if (newPass.trim() === "") {
+                showToast("空のパスワードは設定できません。", "error");
+                return;
+            }
+            masterPassword = newPass.trim();
+            saveDataToStorage();
+            showToast("マスターパスワードを変更し、クラウドに保存しました。", "success");
+        }
+
+        function clearAllSystemData() {
+            if (!confirm("⚠️警告: クラウド上のすべての注文履歴、商品マスタ、店舗マスタが初期化されます。本当によろしいですか？")) return;
+            if (prompt("確認のため『初期化』と入力してください:") !== "初期化") {
+                showToast("処理がキャンセルされました。", "info");
+                return;
+            }
+
+            orders = {};
+            saveDataToStorage();
+            showToast("システムデータをリセットしました。", "success");
+            handleWeekChange();
+        }
+
+        function renderMasterTables() {
+            // 商品マスタテーブル
+            const itemBody = document.getElementById('masterItemTableBody');
+            itemBody.innerHTML = '';
+            obentoItems.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50";
+                tr.innerHTML = `
+                    <td class="p-3 pl-5">
+                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${item.id}</div>
+                        <div class="text-sm font-bold text-slate-800">${item.name}</div>
+                    </td>
+                    <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
+                    <td class="p-3 text-center pr-5">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="editItemPrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                `;
+                itemBody.appendChild(tr);
+            });
+
+            // 店舗マスタテーブル
+            const storeBody = document.getElementById('masterStoreTableBody');
+            storeBody.innerHTML = '';
+            stores.forEach((store, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50";
+                tr.innerHTML = `
+                    <td class="p-3 pl-5">
+                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${store.id}</div>
+                        <div class="text-sm font-bold text-slate-800">${store.name}</div>
+                    </td>
+                    <td class="p-3 text-center pr-5">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                `;
+                storeBody.appendChild(tr);
+            });
+        }
+
+        function addNewItemPrompt() {
+            const name = prompt("新規追加するお弁当の商品名を入力してください:");
+            if (!name) return;
+            const priceStr = prompt(`「${name}」の税込単価(半角数字)を入力してください:`, "500");
+            if (!priceStr) return;
+            const price = parseInt(priceStr, 10);
+            if (isNaN(price) || price < 0) {
+                showToast("不正な金額が入力されました。", "error");
+                return;
+            }
+
+            const nextIndex = obentoItems.length + 1;
+            const newId = "ITEM" + String(nextIndex).padStart(3, '0');
+
+            obentoItems.push({ id: newId, name: name.trim(), price: price });
+            saveDataToStorage();
+            renderMasterTables();
+            showToast(`新規商品「${name}」を追加登録しました。`, "success");
+        }
+
+        function editItemPrompt(index) {
+            const item = obentoItems[index];
+            const name = prompt("商品名を変更:", item.name);
+            if (!name) return;
+            const priceStr = prompt("価格を変更(半角数字):", item.price);
+            if (!priceStr) return;
+            const price = parseInt(priceStr, 10);
+            if (isNaN(price) || price < 0) return;
+
+            obentoItems[index].name = name.trim();
+            obentoItems[index].price = price;
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("商品情報を更新しました。", "success");
+        }
+
+        function deleteItemAction(index) {
+            const item = obentoItems[index];
+            if (!confirm(`本当に「${item.name}」をマスタから削除しますか？\n(注: 過去の注文集計データ等で数値の歪みが出る場合があります)`)) return;
+            obentoItems.splice(index, 1);
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("マスタから商品を削除しました。", "success");
+        }
+
+        function addNewStorePrompt() {
+            const name = prompt("新規追加する店舗名を入力してください:");
+            if (!name) return;
+
+            const nextIndex = stores.length + 1;
+            const newId = "STORE" + String(nextIndex).padStart(3, '0');
+
+            stores.push({ id: newId, name: name.trim() });
+            saveDataToStorage();
+            renderMasterTables();
+            showToast(`新規店舗「${name}」を追加登録しました。`, "success");
+        }
+
+        function editStorePrompt(index) {
+            const store = stores[index];
+            const name = prompt("店舗名を変更:", store.name);
+            if (!name) return;
+
+            stores[index].name = name.trim();
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("店舗情報を更新しました。", "success");
+        }
+
+        function deleteStoreAction(index) {
+            const store = stores[index];
+            if (!confirm(`本当に「${store.name}」を登録マスタから削除しますか？`)) return;
+            stores.splice(index, 1);
+            saveDataToStorage();
+            renderMasterTables();
+            showToast("マスタから店舗を削除しました。", "success");
+        }
+
+        // ==================== 🔔 通知UI表示制御 ====================
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastText.textContent = message;
+
+            if (type === 'success') {
+                toastIcon.innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i>`;
+                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
+            } else if (type === 'error') {
+                toastIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i>`;
+                toast.className = "fixed bottom-5 right-5 z-50 bg-red-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-red-700 transition-all duration-300";
+            } else {
+                toastIcon.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i>`;
+                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
+            }
+
+            toast.classList.remove('hidden');
+            toast.style.opacity = "1";
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 300);
+            }, 4000);
+        }
+
+        // ==================== 🚀 アプリ起動処理 ====================
+
+        window.onload = function() {
+            const now = new Date();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            document.getElementById('currentDateDisplay').innerHTML = `
+                <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
+            `;
+
+            initWeekSelector();       // 週の組み立て（2ヶ月分）
+            initFirebaseSync();       // 🌟クラウドとの自動同期を開始（データ読み込みと画面描画が自動で行われます）
+        };
+    </script>
+</body>
+</html>
