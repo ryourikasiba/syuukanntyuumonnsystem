@@ -1086,58 +1086,30 @@ function printSummary() {
     const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
     const storeVerticalTotals = new Array(stores.length).fill(0);
 
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    const printWindow = window.open('', '_blank');
 
-    let html = `
-        <html>
-        <head>
-            <title>お弁当発注一覧</title>
-            <style>
-                @page { size: A4; margin: 15mm; }
-                body { font-family: sans-serif; font-size: 11px; }
-                
-                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                
-                /* ヘッダー全体（商品名・合計・店舗名）の設定 */
-                th { 
-                    background-color: #94a3b8 !important; /* グレー */
-                    color: #000 !important;              /* 濃い文字 */
-                    padding: 8px; border: 1px solid #475569; 
-                    font-weight: bold; text-align: center; 
-                }
-                
-                td { padding: 6px; border: 1px solid #cbd5e1; text-align: center; }
-                
-                /* 縦の交互の網掛け（行単位の背景色） */
-                tbody tr:nth-child(even) { background-color: #f8fafc; }
-                
-                /* 合計欄の設定（ヘッダーと同じグレー系に） */
-                .total-col { 
-                    background-color: #cbd5e1 !important; 
-                    font-weight: bold; 
-                }
-                
-                /* 商品名と店舗合計の左寄せ */
-                .item-name { text-align: left !important; font-weight: bold; padding-left: 10px; }
-                
-                /* 店舗別合計行の強調 */
-                .footer-row { background-color: #64748b !important; color: #fff !important; font-weight: bold; }
-            </style>
-        </head>
-        <body>
-            <h2>お弁当発注一覧</h2>
-            <p>対象日: <strong>${dayLabel}</strong></p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>商品名</th>
-                        <th class="total-col">合計</th>
+    // 共通のスタイルをCSSとして定義
+    const css = `
+        <style>
+            @page { size: A4 portrait; margin: 10mm; }
+            body { font-family: sans-serif; font-size: 10px; color: #000; margin: 0; padding: 20px; }
+            h2 { font-size: 16px; margin-bottom: 5px; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            th { background-color: #94a3b8 !important; border: 1px solid #000 !important; padding: 6px; text-align: center; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            td { border: 1px solid #000 !important; padding: 4px; text-align: center; }
+            tr:nth-child(even) { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .total-col { background-color: #cbd5e1 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .footer-row { background-color: #475569 !important; color: #fff !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        </style>
     `;
+
+    let html = `<html><head><title>お弁当発注一覧</title>${css}</head><body>`;
+    html += `<h2>お弁当発注一覧</h2><p>対象日: ${dayLabel}</p><table><thead><tr><th style="width: 20%;">商品名</th><th class="total-col" style="width: 10%;">合計</th>`;
     stores.forEach(st => { html += `<th>${st.name}</th>`; });
     html += `</tr></thead><tbody>`;
 
     obentoItems.forEach(it => {
-        html += `<tr><td class="item-name">${it.name}</td>`;
+        html += `<tr><td style="text-align: left; font-weight: bold; padding-left: 5px;">${it.name}</td>`;
         let rowTotal = 0;
         stores.forEach((st, idx) => {
             const stData = orders[selectedWeek] ? orders[selectedWeek][st.id] : null;
@@ -1149,13 +1121,18 @@ function printSummary() {
         html += `<td class="total-col">${rowTotal}</td></tr>`;
     });
 
-    html += `<tr class="footer-row"><td class="item-name">店舗別合計</td><td>-</td>`;
+    html += `<tr class="footer-row"><td style="text-align: left; padding-left: 5px;">店舗別合計</td><td>-</td>`;
     storeVerticalTotals.forEach(total => { html += `<td>${total}</td>`; });
     html += `</tr></tbody></table></body></html>`;
 
+    printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
-    printWindow.onload = () => printWindow.print();
+    
+    printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+    };
 }
  </script>
 
