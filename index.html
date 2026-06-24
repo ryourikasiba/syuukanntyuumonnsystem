@@ -40,6 +40,38 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+
+   <style>
+    /* 画面表示用のスタイルはそのまま残して、その下に以下を追加 */
+    
+    @media print {
+        /* 1. body内の全要素を一旦非表示にする */
+        body > * {
+            display: none !important;
+        }
+
+        /* 2. 印刷したい #printArea だけを強制的に表示する */
+        #printArea {
+            display: block !important;
+            visibility: visible !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 3. もしhiddenクラスが残っていても強制表示させる */
+        #printArea.hidden {
+            display: block !important;
+            visibility: visible !important;
+        }
+    }
+
+</style>
+
+
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
@@ -146,6 +178,14 @@
                 </div>
             </div>
 
+<div class="mt-4 flex gap-2">
+    <button onclick="printSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
+        <i class="fa-solid fa-print"></i> 印刷用一覧を表示
+    </button>
+</div>
+
+<div id="printArea" class="p-8">
+    </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
                     <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -455,6 +495,7 @@
 
         function handleWeekChange() {
             selectedWeek = document.getElementById('weekSelector').value;
+            updateDayOptions();
             renderOrderInputForm();
             updateSummaryData();
             updateInputStatusStats();
@@ -1014,6 +1055,109 @@
             initWeekSelector();
             initFirebaseSync();
         };
-    </script>
+// 【1】曜日選択肢を日付付きで更新する関数
+function updateDayOptions() {
+    const filterDayElement = document.getElementById('filterDay');
+    if (!filterDayElement) return;
+
+    const [year, weekNum] = selectedWeek.split('-W').map(Number);
+    const jan4 = new Date(year, 0, 4);
+    const dayOfJan4 = jan4.getDay() || 7;
+    const firstMonday = new Date(jan4.getTime() - (dayOfJan4 - 1) * 86400000);
+    
+    // 【修正済】強制的に週を合わせるためのオフセット調整
+    const monday = new Date(firstMonday.getTime() + (weekNum - 1) * 7 * 86400000 + (7 * 86400000));
+
+    const days = ['月', '火', '水', '木', '金'];
+    const currentVal = filterDayElement.value;
+    filterDayElement.innerHTML = '<option value="all">全曜日</option>';
+
+    days.forEach((day, index) => {
+        let date = new Date(monday);
+        date.setDate(monday.getDate() + index);
+        const dateDisplay = `${date.getMonth() + 1}/${date.getDate()}`;
+        filterDayElement.innerHTML += `<option value="${day}">${dateDisplay} (${day})</option>`;
+    });
+    filterDayElement.value = currentVal;
+}
+// 【2】印刷実行関数（縦計・デザイン・日付対応）
+function printSummary() {
+    const filterDayElement = document.getElementById('filterDay');
+    const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
+    const storeVerticalTotals = new Array(stores.length).fill(0);
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+
+    let html = `
+        <html>
+        <head>
+            <title>お弁当発注一覧</title>
+            <style>
+                @page { size: A4; margin: 15mm; }
+                body { font-family: sans-serif; font-size: 11px; }
+                
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                
+                /* ヘッダー全体（商品名・合計・店舗名）の設定 */
+                th { 
+                    background-color: #94a3b8 !important; /* グレー */
+                    color: #000 !important;              /* 濃い文字 */
+                    padding: 8px; border: 1px solid #475569; 
+                    font-weight: bold; text-align: center; 
+                }
+                
+                td { padding: 6px; border: 1px solid #cbd5e1; text-align: center; }
+                
+                /* 縦の交互の網掛け（行単位の背景色） */
+                tbody tr:nth-child(even) { background-color: #f8fafc; }
+                
+                /* 合計欄の設定（ヘッダーと同じグレー系に） */
+                .total-col { 
+                    background-color: #cbd5e1 !important; 
+                    font-weight: bold; 
+                }
+                
+                /* 商品名と店舗合計の左寄せ */
+                .item-name { text-align: left !important; font-weight: bold; padding-left: 10px; }
+                
+                /* 店舗別合計行の強調 */
+                .footer-row { background-color: #64748b !important; color: #fff !important; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <h2>お弁当発注一覧</h2>
+            <p>対象日: <strong>${dayLabel}</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>商品名</th>
+                        <th class="total-col">合計</th>
+    `;
+    stores.forEach(st => { html += `<th>${st.name}</th>`; });
+    html += `</tr></thead><tbody>`;
+
+    obentoItems.forEach(it => {
+        html += `<tr><td class="item-name">${it.name}</td>`;
+        let rowTotal = 0;
+        stores.forEach((st, idx) => {
+            const stData = orders[selectedWeek] ? orders[selectedWeek][st.id] : null;
+            const qty = (stData && stData[filterDayElement.value]) ? (stData[filterDayElement.value][it.id] || 0) : 0;
+            storeVerticalTotals[idx] += qty;
+            rowTotal += qty;
+            html += `<td>${qty}</td>`;
+        });
+        html += `<td class="total-col">${rowTotal}</td></tr>`;
+    });
+
+    html += `<tr class="footer-row"><td class="item-name">店舗別合計</td><td>-</td>`;
+    storeVerticalTotals.forEach(total => { html += `<td>${total}</td>`; });
+    html += `</tr></tbody></table></body></html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => printWindow.print();
+}
+ </script>
+
 </body>
 </html>
