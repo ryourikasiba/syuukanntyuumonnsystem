@@ -43,13 +43,11 @@
         }
 
         @media print {
-            /* 1. body内の全要素を一旦非表示にする */
             body > * {
                 display: none !important;
             }
 
-            /* 2. 印刷したい #printArea だけを強制的に表示する */
-            #printArea {
+            #printArea, #printAreaProduction {
                 display: block !important;
                 visibility: visible !important;
                 position: absolute;
@@ -60,10 +58,8 @@
                 padding: 20px;
             }
 
-            /* 3. もしhiddenクラスが残っていても強制表示させる */
-            #printArea.hidden {
-                display: block !important;
-                visibility: visible !important;
+            .no-print {
+                display: none !important;
             }
         }
     </style>
@@ -90,6 +86,9 @@
                     </button>
                     <button id="tabBtnSummary" onclick="switchTab('summary')" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white">
                         <i class="fa-solid fa-chart-pie mr-1"></i> 集計確認
+                    </button>
+                    <button id="tabBtnProduction" onclick="switchTab('production')" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white">
+                        <i class="fa-solid fa-file-lines mr-1"></i> 製造指示書
                     </button>
                     <button id="tabBtnMaster" onclick="switchTab('master')" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white">
                         <i class="fa-solid fa-sliders mr-1"></i> マスタ管理
@@ -129,6 +128,7 @@
             </div>
         </div>
 
+        <!-- 注文入力パネル -->
         <div id="panelOrder" class="space-y-6">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-3">
@@ -152,6 +152,7 @@
             </div>
         </div>
 
+        <!-- 集計確認パネル -->
         <div id="panelSummary" class="hidden space-y-6">
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap items-center gap-4">
                 <div class="flex items-center gap-2">
@@ -162,7 +163,7 @@
                 <div class="flex items-center gap-2">
                     <label for="filterDay" class="text-xs font-bold text-slate-500">曜日絞り込み:</label>
                     <select id="filterDay" onchange="updateSummaryData()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="all">全曜日（月〜金）</option>
+                        <option value="all">全曜日</option>
                         <option value="月">月曜日</option>
                         <option value="火">火曜日</option>
                         <option value="水">水曜日</option>
@@ -178,59 +179,122 @@
                 </button>
             </div>
 
-            <div id="printArea" class="p-8">
-                </div>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-                    <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-kitchen-set text-slate-500"></i>
-                            <h3 class="font-bold text-slate-800 text-sm">商品別 製造集計（発注合計）</h3>
+            <div id="printArea" class="space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-kitchen-set text-slate-500"></i>
+                                <h3 class="font-bold text-slate-800 text-sm">商品別 製造集計（発注合計）</h3>
+                            </div>
+                            <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all no-print">
+                                <i class="fa-solid fa-file-csv"></i> CSV出力
+                            </button>
                         </div>
-                        <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all">
-                            <i class="fa-solid fa-file-csv"></i> CSV出力
-                        </button>
+                        <div class="ios-scroll-fix flex-1">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
+                                        <th class="p-3 pl-5">商品名</th>
+                                        <th class="p-3 text-right">単価</th>
+                                        <th class="p-3 text-center bg-blue-50/50 text-blue-700">合計数量</th>
+                                        <th class="p-3 text-right pr-5">合計金額</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summaryItemTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                    </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="ios-scroll-fix flex-1">
-                        <table class="w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
-                                    <th class="p-3 pl-5">商品名</th>
-                                    <th class="p-3 text-right">単価</th>
-                                    <th class="p-3 text-center bg-blue-50/50 text-blue-700">合計数量</th>
-                                    <th class="p-3 text-right pr-5">合計金額</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryItemTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-                    <div class="bg-slate-50 px-5 py-4 border-b border-slate-100">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-rectangle-list text-slate-500"></i>
-                            <h3 class="font-bold text-slate-800 text-sm">店舗別 入力状況＆金額一覧</h3>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-rectangle-list text-slate-500"></i>
+                                <h3 class="font-bold text-slate-800 text-sm">店舗別 入力状況＆金額一覧</h3>
+                            </div>
                         </div>
-                    </div>
-                    <div class="overflow-y-auto flex-1 max-h-[500px]">
-                        <table class="w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100 sticky top-0 bg-slate-50 z-10">
-                                    <th class="p-3 pl-5">店舗名</th>
-                                    <th class="p-3 text-center">状態</th>
-                                    <th class="p-3 text-right pr-5">金額合計</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryStoreTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
-                                </tbody>
-                        </table>
+                        <div class="overflow-y-auto flex-1 max-h-[500px]">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100 sticky top-0 bg-slate-50 z-10">
+                                        <th class="p-3 pl-5">店舗名</th>
+                                        <th class="p-3 text-center">状態</th>
+                                        <th class="p-3 text-right pr-5">金額合計</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summaryStoreTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                    </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- 製造指示書パネル -->
+        <div id="panelProduction" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-orange-100 text-orange-600 w-10 h-10 rounded-lg flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-file-invoice text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-lg">1週間分のご飯製造指示書</h2>
+                            <p class="text-xs text-slate-400">小ライス・おにぎりの曜日別製造数合計</p>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i> 指示書を印刷
+                    </button>
+                </div>
+
+                <div id="printAreaProduction" class="ios-scroll-fix rounded-2xl border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800 text-white">
+                                <th class="p-4 font-bold border-r border-slate-700 w-48">項目</th>
+                                <th class="p-4 text-center border-r border-slate-700">月曜日</th>
+                                <th class="p-4 text-center border-r border-slate-700">火曜日</th>
+                                <th class="p-4 text-center border-r border-slate-700">水曜日</th>
+                                <th class="p-4 text-center border-r border-slate-700">木曜日</th>
+                                <th class="p-4 text-center">金曜日</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-800">
+                            <tr class="border-b border-slate-200">
+                                <td class="p-4 font-bold bg-slate-50 border-r border-slate-200">小ライス（個）</td>
+                                <td id="prod_rice_mon" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_rice_tue" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_rice_wed" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_rice_thu" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_rice_fri" class="p-4 text-center text-xl font-black">0</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-bold bg-slate-50 border-r border-slate-200">おにぎり（個）</td>
+                                <td id="prod_onigiri_mon" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_onigiri_tue" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_onigiri_wed" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_onigiri_thu" class="p-4 text-center text-xl font-black border-r border-slate-200">0</td>
+                                <td id="prod_onigiri_fri" class="p-4 text-center text-xl font-black">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-6 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> 集計対象商品
+                    </h4>
+                    <div id="productionTargetInfo" class="text-[11px] text-blue-600 flex flex-wrap gap-x-4 gap-y-1">
+                        <!-- 集計対象商品がここに表示されます -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- マスタ管理パネル -->
         <div id="panelMaster" class="hidden space-y-6">
             <div id="masterPasswordLock" class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 max-w-md mx-auto text-center space-y-4">
                 <div class="bg-slate-100 text-slate-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl">
@@ -263,7 +327,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
                         <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
                             <div class="flex items-center gap-2">
@@ -280,6 +344,7 @@
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
                                         <th class="p-3 pl-5">商品コード / 商品名</th>
                                         <th class="p-3 text-right">単価</th>
+                                        <th class="p-3 text-center">製造指示設定</th>
                                         <th class="p-3 text-center pr-5 w-32">操作</th>
                                     </tr>
                                 </thead>
@@ -327,14 +392,48 @@
         <p id="toastText" class="text-sm font-bold"></p>
     </div>
 
+    <!-- 商品編集用モーダル -->
+    <div id="modalItemEdit" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">商品情報の編集</h3>
+                <button onclick="closeItemModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="editItemIndex">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">商品名</label>
+                    <input type="text" id="editItemName" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">税込単価</label>
+                    <input type="number" id="editItemPrice" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">製造指示書への集計設定</label>
+                    <select id="editItemProdType" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">集計しない</option>
+                        <option value="rice">小ライスとして集計</option>
+                        <option value="onigiri">おにぎりとして集計</option>
+                    </select>
+                    <p class="text-[10px] text-slate-400 mt-1">※この設定を有効にすると、製造指示書タブで自動集計されます。</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
+                <button onclick="closeItemModal()" class="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">キャンセル</button>
+                <button onclick="saveItemEdit()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-sm">保存する</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 初期基本マスタ（クラウドにデータがない場合の初期モデル）
+        // 初期基本マスタ
         let obentoItems = [
-            { id: "ITEM001", name: "からあげ弁当", price: 450 },
-            { id: "ITEM002", name: "ハンバーグ弁当", price: 500 },
-            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480 },
-            { id: "ITEM004", name: "生姜焼き弁当", price: 520 },
-            { id: "ITEM005", name: "日替わりA弁当", price: 420 }
+            { id: "ITEM001", name: "からあげ弁当", price: 450, prodType: "" },
+            { id: "ITEM002", name: "ハンバーグ弁当", price: 500, prodType: "" },
+            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480, prodType: "" },
+            { id: "ITEM004", name: "生姜焼き弁当", price: 520, prodType: "" },
+            { id: "ITEM005", name: "日替わりA弁当", price: 420, prodType: "" }
         ];
 
         let stores = [
@@ -386,12 +485,13 @@
                         stores = data.stores || stores;
                         masterPassword = data.masterPassword || masterPassword;
                         
-                        if (typeof updateStoreFilterOptions === 'function') updateStoreFilterOptions();
-                        if (typeof renderStoreSelector === 'function') renderStoreSelector();
-                        if (typeof renderOrderInputForm === 'function') renderOrderInputForm();
-                        if (typeof renderMasterTables === 'function') renderMasterTables();
-                        if (typeof updateSummaryData === 'function') updateSummaryData();
-                        if (typeof updateInputStatusStats === 'function') updateInputStatusStats();
+                        updateStoreFilterOptions();
+                        renderStoreSelector();
+                        renderOrderInputForm();
+                        renderMasterTables();
+                        updateSummaryData();
+                        updateProductionData();
+                        updateInputStatusStats();
                     } else {
                         console.log("クラウドにデータがないため、初期データを保存します。");
                         saveDataToStorage();
@@ -410,10 +510,12 @@
         function switchTab(tabName) {
             document.getElementById('panelOrder').classList.add('hidden');
             document.getElementById('panelSummary').classList.add('hidden');
+            document.getElementById('panelProduction').classList.add('hidden');
             document.getElementById('panelMaster').classList.add('hidden');
 
             document.getElementById('tabBtnOrder').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
             document.getElementById('tabBtnSummary').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
+            document.getElementById('tabBtnProduction').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
             document.getElementById('tabBtnMaster').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-blue-200 hover:text-white";
 
             if (tabName === 'order') {
@@ -423,6 +525,10 @@
                 document.getElementById('panelSummary').classList.remove('hidden');
                 document.getElementById('tabBtnSummary').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm";
                 updateSummaryData();
+            } else if (tabName === 'production') {
+                document.getElementById('panelProduction').classList.remove('hidden');
+                document.getElementById('tabBtnProduction').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm";
+                updateProductionData();
             } else if (tabName === 'master') {
                 document.getElementById('panelMaster').classList.remove('hidden');
                 document.getElementById('tabBtnMaster').className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-blue-700 shadow-sm";
@@ -491,14 +597,15 @@
             updateDayOptions();
             renderOrderInputForm();
             updateSummaryData();
+            updateProductionData();
             updateInputStatusStats();
         }
 
         function renderStoreSelector() {
             const selector = document.getElementById('storeSelector');
+            if (!selector) return;
             const prevSelected = selector.value;
             selector.innerHTML = '';
-
             stores.forEach(st => {
                 const opt = document.createElement('option');
                 opt.value = st.id;
@@ -516,6 +623,7 @@
 
         function renderOrderInputForm() {
             const container = document.getElementById('orderFormContainer');
+            if (!container) return;
             container.innerHTML = '';
 
             if (!selectedWeek || !selectedStore) {
@@ -694,9 +802,12 @@
                 }
             });
 
-            document.getElementById('statUninput').textContent = uninputCount;
-            document.getElementById('statSaving').textContent = savingCount;
-            document.getElementById('statSubmitted').textContent = submittedCount;
+            const elUn = document.getElementById('statUninput');
+            const elSa = document.getElementById('statSaving');
+            const elSu = document.getElementById('statSubmitted');
+            if(elUn) elUn.textContent = uninputCount;
+            if(elSa) elSa.textContent = savingCount;
+            if(elSu) elSu.textContent = submittedCount;
         }
 
         // ==================== 📊 集計ロジック系 ====================
@@ -800,6 +911,69 @@
             });
         }
 
+        // ==================== 🍚 製造指示書ロジック ====================
+
+        function updateProductionData() {
+            const weekData = orders[selectedWeek] || {};
+            const days = ['月', '火', '水', '木', '金'];
+            const dayMap = { '月': 'mon', '火': 'tue', '水': 'wed', '木': 'thu', '金': 'fri' };
+
+            const totals = {
+                rice: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 },
+                onigiri: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 }
+            };
+
+            const riceItems = obentoItems.filter(it => it.prodType === 'rice');
+            const onigiriItems = obentoItems.filter(it => it.prodType === 'onigiri');
+
+            stores.forEach(st => {
+                const stData = weekData[st.id];
+                if (!stData) return;
+
+                days.forEach(day => {
+                    const dayData = stData[day];
+                    if (!dayData) return;
+
+                    const dayKey = dayMap[day];
+
+                    riceItems.forEach(it => {
+                        if (dayData[it.id] !== undefined) {
+                            totals.rice[dayKey] += dayData[it.id];
+                        }
+                    });
+
+                    onigiriItems.forEach(it => {
+                        if (dayData[it.id] !== undefined) {
+                            totals.onigiri[dayKey] += dayData[it.id];
+                        }
+                    });
+                });
+            });
+
+            // UI更新
+            days.forEach(day => {
+                const dayKey = dayMap[day];
+                const elRice = document.getElementById(`prod_rice_${dayKey}`);
+                const elOnigiri = document.getElementById(`prod_onigiri_${dayKey}`);
+                if(elRice) elRice.textContent = totals.rice[dayKey].toLocaleString();
+                if(elOnigiri) elOnigiri.textContent = totals.onigiri[dayKey].toLocaleString();
+            });
+
+            // 対象商品情報の表示
+            const infoContainer = document.getElementById('productionTargetInfo');
+            if (infoContainer) {
+                let infoHtml = '';
+                if (riceItems.length > 0) {
+                    infoHtml += `<span class="font-bold">[小ライス対象]:</span> ${riceItems.map(it => it.name).join(', ')} `;
+                }
+                if (onigiriItems.length > 0) {
+                    infoHtml += `<span class="font-bold ml-4">[おにぎり対象]:</span> ${onigiriItems.map(it => it.name).join(', ')}`;
+                }
+                if (!infoHtml) infoHtml = '※マスタ管理から集計対象商品を設定してください。';
+                infoContainer.innerHTML = infoHtml;
+            }
+        }
+
         function exportToCSV() {
             const filterStoreId = document.getElementById('filterStore').value;
             const filterDayId = document.getElementById('filterDay').value;
@@ -886,17 +1060,23 @@
             obentoItems.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50/50";
+                
+                let prodTypeLabel = '<span class="text-[10px] text-slate-300 italic">未設定</span>';
+                if (item.prodType === 'rice') prodTypeLabel = '<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">小ライス</span>';
+                if (item.prodType === 'onigiri') prodTypeLabel = '<span class="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-full font-bold">おにぎり</span>';
+
                 tr.innerHTML = `
                     <td class="p-3 pl-5">
                         <div class="text-[10px] text-slate-400 font-bold tracking-wider">${item.id}</div>
                         <div class="text-sm font-bold text-slate-800">${item.name}</div>
                     </td>
                     <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
+                    <td class="p-3 text-center">${prodTypeLabel}</td>
                     <td class="p-3 text-center pr-5">
                         <div class="flex gap-1 justify-center">
                             <button onclick="moveItem(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
                             <button onclick="moveItem(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === obentoItems.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === obentoItems.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
-                            <button onclick="editItemPrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="openItemModal(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
                             <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </td>
@@ -969,29 +1149,48 @@
                 return;
             }
 
-            // ID生成ロジックの改善（重複回避のため既存の最大値+1にするなど検討可能だが、ここではシンプルにlength+1）
-            const nextIndex = obentoItems.length + 1;
-            const newId = "ITEM" + String(Date.now()).slice(-6); // 重複を避けるためタイムスタンプの一部を使用
+            const newId = "ITEM" + String(Date.now()).slice(-6);
 
-            obentoItems.push({ id: newId, name: name.trim(), price: price });
+            obentoItems.push({ id: newId, name: name.trim(), price: price, prodType: "" });
             saveDataToStorage();
             renderMasterTables();
             showToast(`新規商品「${name}」を追加登録しました。`, "success");
         }
 
-        function editItemPrompt(index) {
+        // 商品編集モーダル制御
+        function openItemModal(index) {
             const item = obentoItems[index];
-            const name = prompt("商品名を変更:", item.name);
-            if (!name) return;
-            const priceStr = prompt("価格を変更(半角数字):", item.price);
-            if (!priceStr) return;
-            const price = parseInt(priceStr, 10);
-            if (isNaN(price) || price < 0) return;
+            document.getElementById('editItemIndex').value = index;
+            document.getElementById('editItemName').value = item.name;
+            document.getElementById('editItemPrice').value = item.price;
+            document.getElementById('editItemProdType').value = item.prodType || "";
+            document.getElementById('modalItemEdit').classList.remove('hidden');
+        }
+
+        function closeItemModal() {
+            document.getElementById('modalItemEdit').classList.add('hidden');
+        }
+
+        function saveItemEdit() {
+            const index = document.getElementById('editItemIndex').value;
+            const name = document.getElementById('editItemName').value;
+            const price = parseInt(document.getElementById('editItemPrice').value, 10);
+            const prodType = document.getElementById('editItemProdType').value;
+
+            if (!name || isNaN(price) || price < 0) {
+                showToast("入力内容に不備があります。", "error");
+                return;
+            }
 
             obentoItems[index].name = name.trim();
             obentoItems[index].price = price;
+            obentoItems[index].prodType = prodType;
+
             saveDataToStorage();
             renderMasterTables();
+            updateSummaryData();
+            updateProductionData();
+            closeItemModal();
             showToast("商品情報を更新しました。", "success");
         }
 
@@ -1073,9 +1272,12 @@
         window.onload = function() {
             const now = new Date();
             const days = ['日', '月', '火', '水', '木', '金', '土'];
-            document.getElementById('currentDateDisplay').innerHTML = `
-                <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
-            `;
+            const elDate = document.getElementById('currentDateDisplay');
+            if(elDate) {
+                elDate.innerHTML = `
+                    <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
+                `;
+            }
 
             initWeekSelector();
             initFirebaseSync();
@@ -1158,6 +1360,5 @@
             };
         }
     </script>
-
 </body>
 </html>
