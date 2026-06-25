@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -41,37 +42,30 @@
             -webkit-overflow-scrolling: touch;
         }
 
-   <style>
-    /* 画面表示用のスタイルはそのまま残して、その下に以下を追加 */
-    
-    @media print {
-        /* 1. body内の全要素を一旦非表示にする */
-        body > * {
-            display: none !important;
+        @media print {
+            /* 1. body内の全要素を一旦非表示にする */
+            body > * {
+                display: none !important;
+            }
+
+            /* 2. 印刷したい #printArea だけを強制的に表示する */
+            #printArea {
+                display: block !important;
+                visibility: visible !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+            }
+
+            /* 3. もしhiddenクラスが残っていても強制表示させる */
+            #printArea.hidden {
+                display: block !important;
+                visibility: visible !important;
+            }
         }
-
-        /* 2. 印刷したい #printArea だけを強制的に表示する */
-        #printArea {
-            display: block !important;
-            visibility: visible !important;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px;
-        }
-
-        /* 3. もしhiddenクラスが残っていても強制表示させる */
-        #printArea.hidden {
-            display: block !important;
-            visibility: visible !important;
-        }
-    }
-
-</style>
-
-
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
@@ -178,14 +172,14 @@
                 </div>
             </div>
 
-<div class="mt-4 flex gap-2">
-    <button onclick="printSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
-        <i class="fa-solid fa-print"></i> 印刷用一覧を表示
-    </button>
-</div>
+            <div class="mt-4 flex gap-2">
+                <button onclick="printSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
+                    <i class="fa-solid fa-print"></i> 印刷用一覧を表示
+                </button>
+            </div>
 
-<div id="printArea" class="p-8">
-    </div>
+            <div id="printArea" class="p-8">
+                </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
                     <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -257,7 +251,6 @@
             <div id="masterConfigContent" class="hidden space-y-6">
                 <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-amber-50/40 border-amber-100">
                     <div class="flex items-center gap-3">
-                        <div class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg text-xs font-bold">管理者用安全設定</div>
                         <p class="text-xs text-slate-500 font-medium">マスターパスワードの変更や、運用週データの完全初期化が行えます。</p>
                     </div>
                     <div class="flex items-center gap-2">
@@ -287,7 +280,7 @@
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
                                         <th class="p-3 pl-5">商品コード / 商品名</th>
                                         <th class="p-3 text-right">単価</th>
-                                        <th class="p-3 text-center pr-5 w-24">操作</th>
+                                        <th class="p-3 text-center pr-5 w-32">操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="masterItemTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -311,7 +304,7 @@
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
                                         <th class="p-3 pl-5">店舗コード / 店舗名</th>
-                                        <th class="p-3 text-center pr-5 w-24">操作</th>
+                                        <th class="p-3 text-center pr-5 w-32">操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="masterStoreTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -519,7 +512,7 @@
             selectedStore = selector.value;
         }
 
-        // ==================== 📝 注文フォーム組み立て（iPhoneエンター対応追加） ====================
+        // ==================== 📝 注文フォーム組み立て ====================
 
         function renderOrderInputForm() {
             const container = document.getElementById('orderFormContainer');
@@ -603,7 +596,6 @@
             html += `</tbody></table></div>`;
             container.innerHTML = html;
 
-            // 💡 iPhone・スマホ用にエンターキー（Next）で次の入力項目へ移動するイベントを設定
             setupInputNavigation();
         }
 
@@ -612,13 +604,13 @@
             inputs.forEach((input, index) => {
                 input.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') {
-                        e.preventDefault(); // 本来のフォーム送信を防ぐ
+                        e.preventDefault();
                         const nextInput = inputs[index + 1];
                         if (nextInput) {
-                            nextInput.focus(); // 次の入力欄へ移動
-                            nextInput.select(); // 入力されている文字を選択状態にする
+                            nextInput.focus();
+                            nextInput.select();
                         } else {
-                            input.blur(); // 最後の項目の場合はキーボードを閉じる
+                            input.blur();
                         }
                     }
                 });
@@ -665,8 +657,8 @@
 
         function updateStoreFilterOptions() {
             const filter = document.getElementById('filterStore');
-            const prevVal = filter.value;
             if(!filter) return;
+            const prevVal = filter.value;
             filter.innerHTML = '<option value="all">すべての店舗</option>';
             stores.forEach(st => {
                 const opt = document.createElement('option');
@@ -831,7 +823,6 @@
 
                         const qty = dayData[it.id];
                         const subtotal = qty * it.price;
-                        
                         csvContent += `"${it.name}",${it.price},"${day}曜日","${st.name}",${qty},${subtotal}\n`;
                     });
                 });
@@ -903,7 +894,9 @@
                     <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
                     <td class="p-3 text-center pr-5">
                         <div class="flex gap-1 justify-center">
-                            <button onclick="editItemPrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="moveItem(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
+                            <button onclick="moveItem(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === obentoItems.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === obentoItems.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
+                            <button onclick="editItemPrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
                             <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </td>
@@ -924,13 +917,45 @@
                     </td>
                     <td class="p-3 text-center pr-5">
                         <div class="flex gap-1 justify-center">
-                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs" title="編集"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="moveStore(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
+                            <button onclick="moveStore(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === stores.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === stores.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
+                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
                             <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </td>
                 `;
                 storeBody.appendChild(tr);
             });
+        }
+
+        // 並び替え機能（商品）
+        function moveItem(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= obentoItems.length) return;
+            
+            const temp = obentoItems[index];
+            obentoItems[index] = obentoItems[newIndex];
+            obentoItems[newIndex] = temp;
+            
+            saveDataToStorage();
+            renderMasterTables();
+            renderOrderInputForm();
+            updateSummaryData();
+        }
+
+        // 並び替え機能（店舗）
+        function moveStore(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= stores.length) return;
+            
+            const temp = stores[index];
+            stores[index] = stores[newIndex];
+            stores[newIndex] = temp;
+            
+            saveDataToStorage();
+            renderMasterTables();
+            renderStoreSelector();
+            updateStoreFilterOptions();
         }
 
         function addNewItemPrompt() {
@@ -944,8 +969,9 @@
                 return;
             }
 
+            // ID生成ロジックの改善（重複回避のため既存の最大値+1にするなど検討可能だが、ここではシンプルにlength+1）
             const nextIndex = obentoItems.length + 1;
-            const newId = "ITEM" + String(nextIndex).padStart(3, '0');
+            const newId = "ITEM" + String(Date.now()).slice(-6); // 重複を避けるためタイムスタンプの一部を使用
 
             obentoItems.push({ id: newId, name: name.trim(), price: price });
             saveDataToStorage();
@@ -982,8 +1008,7 @@
             const name = prompt("新規追加する店舗名を入力してください:");
             if (!name) return;
 
-            const nextIndex = stores.length + 1;
-            const newId = "STORE" + String(nextIndex).padStart(3, '0');
+            const newId = "STORE" + String(Date.now()).slice(-6);
 
             stores.push({ id: newId, name: name.trim() });
             saveDataToStorage();
@@ -1055,86 +1080,84 @@
             initWeekSelector();
             initFirebaseSync();
         };
-// 【1】曜日選択肢を日付付きで更新する関数
-function updateDayOptions() {
-    const filterDayElement = document.getElementById('filterDay');
-    if (!filterDayElement) return;
 
-    const [year, weekNum] = selectedWeek.split('-W').map(Number);
-    const jan4 = new Date(year, 0, 4);
-    const dayOfJan4 = jan4.getDay() || 7;
-    const firstMonday = new Date(jan4.getTime() - (dayOfJan4 - 1) * 86400000);
-    
-    // 【修正済】強制的に週を合わせるためのオフセット調整
-    const monday = new Date(firstMonday.getTime() + (weekNum - 1) * 7 * 86400000 + (7 * 86400000));
+        function updateDayOptions() {
+            const filterDayElement = document.getElementById('filterDay');
+            if (!filterDayElement) return;
 
-    const days = ['月', '火', '水', '木', '金'];
-    const currentVal = filterDayElement.value;
-    filterDayElement.innerHTML = '<option value="all">全曜日</option>';
+            const [year, weekNum] = selectedWeek.split('-W').map(Number);
+            const jan4 = new Date(year, 0, 4);
+            const dayOfJan4 = jan4.getDay() || 7;
+            const firstMonday = new Date(jan4.getTime() - (dayOfJan4 - 1) * 86400000);
+            const monday = new Date(firstMonday.getTime() + (weekNum - 1) * 7 * 86400000 + (7 * 86400000));
 
-    days.forEach((day, index) => {
-        let date = new Date(monday);
-        date.setDate(monday.getDate() + index);
-        const dateDisplay = `${date.getMonth() + 1}/${date.getDate()}`;
-        filterDayElement.innerHTML += `<option value="${day}">${dateDisplay} (${day})</option>`;
-    });
-    filterDayElement.value = currentVal;
-}
-// 【2】印刷実行関数（縦計・デザイン・日付対応）
-function printSummary() {
-    const filterDayElement = document.getElementById('filterDay');
-    const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
-    const storeVerticalTotals = new Array(stores.length).fill(0);
+            const days = ['月', '火', '水', '木', '金'];
+            const currentVal = filterDayElement.value;
+            filterDayElement.innerHTML = '<option value="all">全曜日</option>';
 
-    const printWindow = window.open('', '_blank');
+            days.forEach((day, index) => {
+                let date = new Date(monday);
+                date.setDate(monday.getDate() + index);
+                const dateDisplay = `${date.getMonth() + 1}/${date.getDate()}`;
+                filterDayElement.innerHTML += `<option value="${day}">${dateDisplay} (${day})</option>`;
+            });
+            filterDayElement.value = currentVal;
+        }
 
-    // 共通のスタイルをCSSとして定義
-    const css = `
-        <style>
-            @page { size: A4 portrait; margin: 10mm; }
-            body { font-family: sans-serif; font-size: 10px; color: #000; margin: 0; padding: 20px; }
-            h2 { font-size: 16px; margin-bottom: 5px; }
-            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-            th { background-color: #94a3b8 !important; border: 1px solid #000 !important; padding: 6px; text-align: center; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            td { border: 1px solid #000 !important; padding: 4px; text-align: center; }
-            tr:nth-child(even) { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .total-col { background-color: #cbd5e1 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .footer-row { background-color: #475569 !important; color: #fff !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        </style>
-    `;
+        function printSummary() {
+            const filterDayElement = document.getElementById('filterDay');
+            const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
+            const storeVerticalTotals = new Array(stores.length).fill(0);
 
-    let html = `<html><head><title>お弁当発注一覧</title>${css}</head><body>`;
-    html += `<h2>お弁当発注一覧</h2><p>対象日: ${dayLabel}</p><table><thead><tr><th style="width: 20%;">商品名</th><th class="total-col" style="width: 10%;">合計</th>`;
-    stores.forEach(st => { html += `<th>${st.name}</th>`; });
-    html += `</tr></thead><tbody>`;
+            const printWindow = window.open('', '_blank');
 
-    obentoItems.forEach(it => {
-        html += `<tr><td style="text-align: left; font-weight: bold; padding-left: 5px;">${it.name}</td>`;
-        let rowTotal = 0;
-        stores.forEach((st, idx) => {
-            const stData = orders[selectedWeek] ? orders[selectedWeek][st.id] : null;
-            const qty = (stData && stData[filterDayElement.value]) ? (stData[filterDayElement.value][it.id] || 0) : 0;
-            storeVerticalTotals[idx] += qty;
-            rowTotal += qty;
-            html += `<td>${qty}</td>`;
-        });
-        html += `<td class="total-col">${rowTotal}</td></tr>`;
-    });
+            const css = `
+                <style>
+                    @page { size: A4 portrait; margin: 10mm; }
+                    body { font-family: sans-serif; font-size: 10px; color: #000; margin: 0; padding: 20px; }
+                    h2 { font-size: 16px; margin-bottom: 5px; }
+                    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                    th { background-color: #94a3b8 !important; border: 1px solid #000 !important; padding: 6px; text-align: center; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    td { border: 1px solid #000 !important; padding: 4px; text-align: center; }
+                    tr:nth-child(even) { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .total-col { background-color: #cbd5e1 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .footer-row { background-color: #475569 !important; color: #fff !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                </style>
+            `;
 
-    html += `<tr class="footer-row"><td style="text-align: left; padding-left: 5px;">店舗別合計</td><td>-</td>`;
-    storeVerticalTotals.forEach(total => { html += `<td>${total}</td>`; });
-    html += `</tr></tbody></table></body></html>`;
+            let html = `<html><head><title>お弁当発注一覧</title>${css}</head><body>`;
+            html += `<h2>お弁当発注一覧</h2><p>対象日: ${dayLabel}</p><table><thead><tr><th style="width: 20%;">商品名</th><th class="total-col" style="width: 10%;">合計</th>`;
+            stores.forEach(st => { html += `<th>${st.name}</th>`; });
+            html += `</tr></thead><tbody>`;
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    
-    printWindow.onload = function() {
-        printWindow.focus();
-        printWindow.print();
-    };
-}
- </script>
+            obentoItems.forEach(it => {
+                html += `<tr><td style="text-align: left; font-weight: bold; padding-left: 5px;">${it.name}</td>`;
+                let rowTotal = 0;
+                let storeCols = "";
+                stores.forEach((st, idx) => {
+                    const stData = orders[selectedWeek] ? orders[selectedWeek][st.id] : null;
+                    const qty = (stData && stData[filterDayElement.value]) ? (stData[filterDayElement.value][it.id] || 0) : 0;
+                    storeVerticalTotals[idx] += qty;
+                    rowTotal += qty;
+                    storeCols += `<td>${qty}</td>`;
+                });
+                html += `<td class="total-col">${rowTotal}</td>${storeCols}</tr>`;
+            });
+
+            html += `<tr class="footer-row"><td>総合計</td><td class="total-col">${storeVerticalTotals.reduce((a, b) => a + b, 0)}</td>`;
+            storeVerticalTotals.forEach(total => { html += `<td>${total}</td>`; });
+            html += `</tr></tbody></table></body></html>`;
+
+            printWindow.document.open();
+            printWindow.document.write(html);
+            printWindow.document.close();
+            
+            printWindow.onload = function() {
+                printWindow.focus();
+                printWindow.print();
+            };
+        }
+    </script>
 
 </body>
 </html>
