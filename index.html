@@ -434,39 +434,11 @@
                     <input type="number" id="editItemPrice" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">製造指示書への集計設定</label>
-                    <select id="editItemProdType" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">集計しない</option>
-                        <optgroup label="ご飯類">
-                            <option value="rice">小ライスとして集計</option>
-                            <option value="onigiri">おにぎりとして集計</option>
-                        </optgroup>
-                        <optgroup label="材料・具材">
-                            <option value="焼きそば麺">焼きそば麺</option>
-                            <option value="オムライスシート">オムライスシート</option>
-                            <option value="鶏唐揚げ">鶏唐揚げ</option>
-                            <option value="チキンライス">チキンライス</option>
-                            <option value="チャーハン">チャーハン</option>
-                            <option value="ハンバーグ60ｇ">ハンバーグ60ｇ</option>
-                            <option value="ハンバーグ120ｇ">ハンバーグ120ｇ</option>
-                            <option value="目玉焼">目玉焼</option>
-                            <option value="ギョウザ">ギョウザ</option>
-                            <option value="とんかつ100ｇ">とんかつ100ｇ</option>
-                            <option value="盛合せフライ">盛合せフライ</option>
-                            <option value="さば味噌煮">さば味噌煮</option>
-                            <option value="鶏280/300">鶏280/300</option>
-                            <option value="牛肉">牛肉</option>
-                            <option value="タレ付き焼肉">タレ付き焼肉</option>
-                            <option value="チキンカツ55ｇ">チキンカツ55ｇ</option>
-                            <option value="卵">卵</option>
-                            <option value="フライドポテト">フライドポテト</option>
-                            <option value="フライドチキン">フライドチキン</option>
-                            <option value="のばしえび">のばしえび</option>
-                            <option value="たこやき">たこやき</option>
-                            <option value="サイコロ豆腐">サイコロ豆腐</option>
-                        </optgroup>
-                    </select>
-                    <p class="text-[10px] text-slate-400 mt-1">※この設定を有効にすると、製造指示書タブで自動集計されます。</p>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">製造指示書への集計設定（複数選択可）</label>
+                    <div id="editItemProdTypes" class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <!-- JSでチェックボックスを生成 -->
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">※紐付けた材料が製造指示書タブで自動集計されます。</p>
                 </div>
             </div>
             <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
@@ -477,22 +449,43 @@
     </div>
 
     <script>
-        // 材料項目の定義
-        const MATERIAL_ITEMS = [
-            "焼きそば麺", "オムライスシート", "鶏唐揚げ", "チキンライス", "チャーハン", 
-            "ハンバーグ60ｇ", "ハンバーグ120ｇ", "目玉焼", "ギョウザ", "とんかつ100ｇ", 
-            "盛合せフライ", "さば味噌煮", "鶏280/300", "牛肉", "タレ付き焼肉", 
-            "チキンカツ55ｇ", "卵", "フライドポテト", "フライドチキン", "のばしえび", 
-            "たこやき", "サイコロ豆腐"
-        ];
+        // 材料項目の定義と計算ルール
+        const PRODUCTION_CONFIG = {
+            "rice": { name: "小ライス（個）", factor: 1, unit: "" },
+            "onigiri": { name: "おにぎり（個）", factor: 1, unit: "" },
+            "焼きそば麺": { name: "焼きそば麺", factor: 1.3, unit: "" },
+            "オムライスシート": { name: "オムライスシート", factor: 1, unit: "" },
+            "鶏唐揚げ": { name: "鶏唐揚げ", factor: 5, unit: "" },
+            "チキンライス": { name: "チキンライス", factor: 0.25, unit: "kg" },
+            "チャーハン": { name: "チャーハン", factor: 0.25, unit: "kg" },
+            "ハンバーグ60ｇ": { name: "ハンバーグ60ｇ", factor: 1, unit: "" },
+            "ハンバーグ120ｇ": { name: "ハンバーグ120ｇ", factor: 1, unit: "" },
+            "目玉焼": { name: "目玉焼", factor: 1, unit: "" },
+            "ギョウザ": { name: "ギョウザ", factor: 1, unit: "" },
+            "とんかつ100ｇ": { name: "とんかつ100ｇ", factor: 1, unit: "" },
+            "盛合せフライ": { name: "盛合せフライ", factor: 1, unit: "" },
+            "さば味噌煮": { name: "さば味噌煮", factor: 1, unit: "" },
+            "鶏280/300": { name: "鶏280/300", factor: 0.5, unit: "枚" },
+            "牛肉": { name: "牛肉", factor: 10, unit: "g" },
+            "タレ付き焼肉": { name: "タレ付き焼肉", factor: 120, unit: "g" },
+            "チキンカツ55ｇ": { name: "チキンカツ55ｇ", factor: 1, unit: "" },
+            "卵": { name: "卵", factor: 4, unit: "" },
+            "フライドポテト": { name: "フライドポテト", factor: 15, unit: "g" },
+            "フライドチキン": { name: "フライドチキン", factor: 1, unit: "" },
+            "のばしえび": { name: "のばしえび", factor: 2, unit: "" },
+            "たこやき": { name: "たこやき", factor: 6, unit: "" },
+            "サイコロ豆腐": { name: "サイコロ豆腐", factor: 80, unit: "" }
+        };
+
+        const MATERIAL_ITEMS = Object.keys(PRODUCTION_CONFIG).filter(k => k !== 'rice' && k !== 'onigiri');
 
         // 初期基本マスタ
         let obentoItems = [
-            { id: "ITEM001", name: "からあげ弁当", price: 450, prodType: "" },
-            { id: "ITEM002", name: "ハンバーグ弁当", price: 500, prodType: "" },
-            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480, prodType: "" },
-            { id: "ITEM004", name: "生姜焼き弁当", price: 520, prodType: "" },
-            { id: "ITEM005", name: "日替わりA弁当", price: 420, prodType: "" }
+            { id: "ITEM001", name: "からあげ弁当", price: 450, prodTypes: ["rice", "鶏唐揚げ"] },
+            { id: "ITEM002", name: "ハンバーグ弁当", price: 500, prodTypes: ["rice", "ハンバーグ120ｇ"] },
+            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480, prodTypes: ["rice"] },
+            { id: "ITEM004", name: "生姜焼き弁当", price: 520, prodTypes: ["rice", "牛肉"] },
+            { id: "ITEM005", name: "日替わりA弁当", price: 420, prodTypes: ["rice"] }
         ];
 
         let stores = [
@@ -541,6 +534,14 @@
                         const data = doc.data();
                         orders = data.orders || {};
                         obentoItems = data.obentoItems || obentoItems;
+                        // 旧バージョンのprodTypeをprodTypesに変換
+                        obentoItems.forEach(it => {
+                            if (it.prodType !== undefined) {
+                                it.prodTypes = it.prodType ? [it.prodType] : [];
+                                delete it.prodType;
+                            }
+                            if (!it.prodTypes) it.prodTypes = [];
+                        });
                         stores = data.stores || stores;
                         masterPassword = data.masterPassword || masterPassword;
                         
@@ -977,18 +978,13 @@
             const days = ['月', '火', '水', '木', '金'];
             const dayMap = { '月': 'mon', '火': 'tue', '水': 'wed', '木': 'thu', '金': 'fri' };
 
-            // 合計初期化
-            const totals = {
-                rice: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 },
-                onigiri: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 }
-            };
-            
-            const materialTotals = {};
-            MATERIAL_ITEMS.forEach(m => {
-                materialTotals[m] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
+            // 集計用データの初期化
+            const aggregated = {};
+            Object.keys(PRODUCTION_CONFIG).forEach(key => {
+                aggregated[key] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
             });
 
-            // 集計
+            // 集計実行
             stores.forEach(st => {
                 const stData = weekData[st.id];
                 if (!stData) return;
@@ -1000,37 +996,45 @@
 
                     obentoItems.forEach(it => {
                         const qty = dayData[it.id] || 0;
-                        if (qty === 0) return;
+                        if (qty === 0 || !it.prodTypes) return;
 
-                        if (it.prodType === 'rice') totals.rice[dayKey] += qty;
-                        else if (it.prodType === 'onigiri') totals.onigiri[dayKey] += qty;
-                        else if (MATERIAL_ITEMS.includes(it.prodType)) {
-                            materialTotals[it.prodType][dayKey] += qty;
-                        }
+                        it.prodTypes.forEach(typeKey => {
+                            if (aggregated[typeKey]) {
+                                aggregated[typeKey][dayKey] += qty;
+                            }
+                        });
                     });
                 });
             });
 
-            // UI更新: ご飯
+            // UI更新関数: 計算と単位適用
+            const formatVal = (key, rawVal) => {
+                if (rawVal === 0) return "0";
+                const config = PRODUCTION_CONFIG[key];
+                const calculated = Math.ceil(rawVal * config.factor);
+                return `${calculated.toLocaleString()}${config.unit}`;
+            };
+
+            // ご飯UI更新
             days.forEach(day => {
                 const dayKey = dayMap[day];
-                document.getElementById(`prod_rice_${dayKey}`).textContent = totals.rice[dayKey].toLocaleString();
-                document.getElementById(`prod_onigiri_${dayKey}`).textContent = totals.onigiri[dayKey].toLocaleString();
+                document.getElementById(`prod_rice_${dayKey}`).textContent = formatVal('rice', aggregated.rice[dayKey]);
+                document.getElementById(`prod_onigiri_${dayKey}`).textContent = formatVal('onigiri', aggregated.onigiri[dayKey]);
             });
 
-            // UI更新: 材料表
+            // 材料表UI更新
             const materialBody = document.getElementById('productionMaterialBody');
             materialBody.innerHTML = '';
             MATERIAL_ITEMS.forEach(m => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-200";
                 tr.innerHTML = `
-                    <td class="p-3 font-bold bg-slate-50 border-r border-slate-200 text-sm">${m}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${materialTotals[m].mon.toLocaleString()}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${materialTotals[m].tue.toLocaleString()}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${materialTotals[m].wed.toLocaleString()}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${materialTotals[m].thu.toLocaleString()}</td>
-                    <td class="p-3 text-center text-xl font-black">${materialTotals[m].fri.toLocaleString()}</td>
+                    <td class="p-3 font-bold bg-slate-50 border-r border-slate-200 text-sm">${PRODUCTION_CONFIG[m].name}</td>
+                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].mon)}</td>
+                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].tue)}</td>
+                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].wed)}</td>
+                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].thu)}</td>
+                    <td class="p-3 text-center text-xl font-black">${formatVal(m, aggregated[m].fri)}</td>
                 `;
                 materialBody.appendChild(tr);
             });
@@ -1039,16 +1043,12 @@
             const infoContainer = document.getElementById('productionTargetInfo');
             if (infoContainer) {
                 let infoHtml = '';
-                const riceItems = obentoItems.filter(it => it.prodType === 'rice');
-                const onigiriItems = obentoItems.filter(it => it.prodType === 'onigiri');
-                
-                if (riceItems.length > 0) infoHtml += `<div><span class="font-bold">[小ライス対象]:</span> ${riceItems.map(it => it.name).join(', ')}</div>`;
-                if (onigiriItems.length > 0) infoHtml += `<div><span class="font-bold">[おにぎり対象]:</span> ${onigiriItems.map(it => it.name).join(', ')}</div>`;
-                
-                MATERIAL_ITEMS.forEach(m => {
-                    const matched = obentoItems.filter(it => it.prodType === m);
+                Object.keys(PRODUCTION_CONFIG).forEach(key => {
+                    const matched = obentoItems.filter(it => it.prodTypes && it.prodTypes.includes(key));
                     if (matched.length > 0) {
-                        infoHtml += `<div><span class="font-bold">[${m}対象]:</span> ${matched.map(it => it.name).join(', ')}</div>`;
+                        const config = PRODUCTION_CONFIG[key];
+                        const calcInfo = config.factor !== 1 ? ` (×${config.factor}${config.unit ? ' '+config.unit : ''}・切上げ)` : '';
+                        infoHtml += `<div><span class="font-bold">[${config.name}${calcInfo}対象]:</span> ${matched.map(it => it.name).join(', ')}</div>`;
                     }
                 });
 
@@ -1145,9 +1145,19 @@
                 tr.className = "hover:bg-slate-50/50";
                 
                 let prodTypeLabel = '<span class="text-[10px] text-slate-300 italic">未設定</span>';
-                if (item.prodType === 'rice') prodTypeLabel = '<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">小ライス</span>';
-                else if (item.prodType === 'onigiri') prodTypeLabel = '<span class="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-full font-bold">おにぎり</span>';
-                else if (item.prodType) prodTypeLabel = `<span class="bg-slate-100 text-slate-700 text-[10px] px-2 py-0.5 rounded-full font-bold">${item.prodType}</span>`;
+                if (item.prodTypes && item.prodTypes.length > 0) {
+                    prodTypeLabel = '<div class="flex flex-wrap gap-1 justify-center">';
+                    item.prodTypes.forEach(typeKey => {
+                        const config = PRODUCTION_CONFIG[typeKey];
+                        if (config) {
+                            let colorClass = "bg-slate-100 text-slate-700";
+                            if (typeKey === 'rice') colorClass = "bg-blue-100 text-blue-700";
+                            if (typeKey === 'onigiri') colorClass = "bg-orange-100 text-orange-700";
+                            prodTypeLabel += `<span class="${colorClass} text-[10px] px-2 py-0.5 rounded-full font-bold">${config.name.replace('（個）','')}</span>`;
+                        }
+                    });
+                    prodTypeLabel += '</div>';
+                }
 
                 tr.innerHTML = `
                     <td class="p-3 pl-5">
@@ -1235,7 +1245,7 @@
 
             const newId = "ITEM" + String(Date.now()).slice(-6);
 
-            obentoItems.push({ id: newId, name: name.trim(), price: price, prodType: "" });
+            obentoItems.push({ id: newId, name: name.trim(), price: price, prodTypes: [] });
             saveDataToStorage();
             renderMasterTables();
             showToast(`新規商品「${name}」を追加登録しました。`, "success");
@@ -1247,7 +1257,23 @@
             document.getElementById('editItemIndex').value = index;
             document.getElementById('editItemName').value = item.name;
             document.getElementById('editItemPrice').value = item.price;
-            document.getElementById('editItemProdType').value = item.prodType || "";
+            
+            // チェックボックス生成
+            const container = document.getElementById('editItemProdTypes');
+            container.innerHTML = '';
+            
+            Object.keys(PRODUCTION_CONFIG).forEach(key => {
+                const config = PRODUCTION_CONFIG[key];
+                const isChecked = item.prodTypes && item.prodTypes.includes(key);
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-2";
+                div.innerHTML = `
+                    <input type="checkbox" id="chk_${key}" value="${key}" ${isChecked ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    <label for="chk_${key}" class="text-xs font-bold text-slate-700 cursor-pointer">${config.name.replace('（個）','')}</label>
+                `;
+                container.appendChild(div);
+            });
+
             document.getElementById('modalItemEdit').classList.remove('hidden');
         }
 
@@ -1259,7 +1285,14 @@
             const index = document.getElementById('editItemIndex').value;
             const name = document.getElementById('editItemName').value;
             const price = parseInt(document.getElementById('editItemPrice').value, 10);
-            const prodType = document.getElementById('editItemProdType').value;
+            
+            // チェックされた項目を取得
+            const checkedTypes = [];
+            Object.keys(PRODUCTION_CONFIG).forEach(key => {
+                if (document.getElementById(`chk_${key}`).checked) {
+                    checkedTypes.push(key);
+                }
+            });
 
             if (!name || isNaN(price) || price < 0) {
                 showToast("入力内容に不備があります。", "error");
@@ -1268,7 +1301,7 @@
 
             obentoItems[index].name = name.trim();
             obentoItems[index].price = price;
-            obentoItems[index].prodType = prodType;
+            obentoItems[index].prodTypes = checkedTypes;
 
             saveDataToStorage();
             renderMasterTables();
