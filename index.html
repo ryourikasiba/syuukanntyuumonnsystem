@@ -309,7 +309,7 @@
                 
                 <div class="mt-6 bg-blue-50 p-4 rounded-xl border border-blue-100">
                     <h4 class="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1">
-                        <i class="fa-solid fa-circle-info"></i> 集計対象商品
+                        <i class="fa-solid fa-circle-info"></i> 集計設定ガイド
                     </h4>
                     <div id="productionTargetInfo" class="text-[11px] text-blue-600 space-y-1">
                         <!-- 集計対象商品がここに表示されます -->
@@ -418,27 +418,31 @@
 
     <!-- 商品編集用モーダル -->
     <div id="modalItemEdit" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                 <h3 class="font-bold text-slate-800">商品情報の編集</h3>
                 <button onclick="closeItemModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                 <input type="hidden" id="editItemIndex">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">商品名</label>
-                    <input type="text" id="editItemName" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">税込単価</label>
-                    <input type="number" id="editItemPrice" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-2">製造指示書への集計設定（複数選択可）</label>
-                    <div id="editItemProdTypes" class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <!-- JSでチェックボックスを生成 -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">商品名</label>
+                        <input type="text" id="editItemName" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-1">※紐付けた材料が製造指示書タブで自動集計されます。</p>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">税込単価</label>
+                        <input type="number" id="editItemPrice" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">製造指示書への集計設定（複数選択可・個別の係数設定）</label>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="grid grid-cols-1 gap-3" id="editItemProdTypes">
+                            <!-- JSで項目と係数入力を生成 -->
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2">※チェックを入れた材料が自動集計されます。係数は注文数に掛ける数字です（空欄は1倍として計算）。</p>
                 </div>
             </div>
             <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
@@ -449,13 +453,13 @@
     </div>
 
     <script>
-        // 材料項目の定義と計算ルール
+        // 材料項目の定義とデフォルト単位
         const PRODUCTION_CONFIG = {
             "rice": { name: "小ライス（個）", factor: 1, unit: "" },
             "onigiri": { name: "おにぎり（個）", factor: 1, unit: "" },
             "焼きそば麺": { name: "焼きそば麺", factor: 1.3, unit: "" },
             "オムライスシート": { name: "オムライスシート", factor: 1, unit: "" },
-            "鶏唐揚げ": { name: "鶏唐揚げ", factor: 5, unit: "" },
+            "鶏唐揚げ": { name: "鶏唐揚げ", factor: 1, unit: "" }, // 係数削除、デフォルト1
             "チキンライス": { name: "チキンライス", factor: 0.25, unit: "kg" },
             "チャーハン": { name: "チャーハン", factor: 0.25, unit: "kg" },
             "ハンバーグ60ｇ": { name: "ハンバーグ60ｇ", factor: 1, unit: "" },
@@ -466,7 +470,7 @@
             "盛合せフライ": { name: "盛合せフライ", factor: 1, unit: "" },
             "さば味噌煮": { name: "さば味噌煮", factor: 1, unit: "" },
             "鶏280/300": { name: "鶏280/300", factor: 0.5, unit: "枚" },
-            "牛肉": { name: "牛肉", factor: 10, unit: "g" },
+            "牛肉": { name: "牛肉", factor: 1, unit: "g" }, // 係数削除、デフォルト1
             "タレ付き焼肉": { name: "タレ付き焼肉", factor: 120, unit: "g" },
             "チキンカツ55ｇ": { name: "チキンカツ55ｇ", factor: 1, unit: "" },
             "卵": { name: "卵", factor: 4, unit: "" },
@@ -481,19 +485,14 @@
 
         // 初期基本マスタ
         let obentoItems = [
-            { id: "ITEM001", name: "からあげ弁当", price: 450, prodTypes: ["rice", "鶏唐揚げ"] },
-            { id: "ITEM002", name: "ハンバーグ弁当", price: 500, prodTypes: ["rice", "ハンバーグ120ｇ"] },
-            { id: "ITEM003", name: "サケ塩焼き弁当", price: 480, prodTypes: ["rice"] },
-            { id: "ITEM004", name: "生姜焼き弁当", price: 520, prodTypes: ["rice", "牛肉"] },
-            { id: "ITEM005", name: "日替わりA弁当", price: 420, prodTypes: ["rice"] }
+            { id: "ITEM001", name: "からあげ弁当", price: 450, prodTypes: ["rice", "鶏唐揚げ"], factors: { "鶏唐揚げ": 5 } },
+            { id: "ITEM002", name: "ハンバーグ弁当", price: 500, prodTypes: ["rice", "ハンバーグ120ｇ"], factors: {} },
+            { id: "ITEM003", name: "牛焼肉弁当", price: 600, prodTypes: ["rice", "牛肉"], factors: { "牛肉": 10 } }
         ];
 
         let stores = [
             { id: "STORE001", name: "丸の内本店" },
-            { id: "STORE002", name: "渋谷道玄坂店" },
-            { id: "STORE003", name: "新宿西口店" },
-            { id: "STORE004", name: "池袋東口店" },
-            { id: "STORE005", name: "横浜みなとみらい店" }
+            { id: "STORE002", name: "渋谷道玄坂店" }
         ];
 
         let orders = {};
@@ -534,14 +533,13 @@
                         const data = doc.data();
                         orders = data.orders || {};
                         obentoItems = data.obentoItems || obentoItems;
-                        // 旧バージョンのprodTypeをprodTypesに変換
+                        
+                        // データの互換性維持
                         obentoItems.forEach(it => {
-                            if (it.prodType !== undefined) {
-                                it.prodTypes = it.prodType ? [it.prodType] : [];
-                                delete it.prodType;
-                            }
                             if (!it.prodTypes) it.prodTypes = [];
+                            if (!it.factors) it.factors = {};
                         });
+
                         stores = data.stores || stores;
                         masterPassword = data.masterPassword || masterPassword;
                         
@@ -553,7 +551,6 @@
                         updateProductionData();
                         updateInputStatusStats();
                     } else {
-                        console.log("クラウドにデータがないため、初期データを保存します。");
                         saveDataToStorage();
                     }
                 }, (error) => {
@@ -606,10 +603,8 @@
         function initWeekSelector() {
             const selector = document.getElementById('weekSelector');
             selector.innerHTML = '';
-
             const today = new Date();
             let currentWed = new Date(today);
-            
             const currentDay = today.getDay();
             const daysToWednesday = (3 - currentDay + 7) % 7;
             currentWed.setDate(today.getDate() + daysToWednesday);
@@ -617,26 +612,20 @@
             for (let i = -2; i < 9; i++) {
                 let targetWed = new Date(currentWed);
                 targetWed.setDate(currentWed.getDate() + (i * 7));
-
                 let nextMon = new Date(targetWed);
                 nextMon.setDate(targetWed.getDate() + 5);
                 let nextFri = new Date(targetWed);
                 nextFri.setDate(targetWed.getDate() + 9);
-
                 const weekVal = `${targetWed.getFullYear()}-W${getWeekNumber(targetWed)}`;
-                
                 const labelMon = `${nextMon.getMonth()+1}/${nextMon.getDate()}`;
                 const labelFri = `${nextFri.getMonth()+1}/${nextFri.getDate()}`;
                 const wedLabel = `${targetWed.getMonth()+1}/${targetWed.getDate()}`;
-                
                 let text = `【翌週製造】${labelMon}(月)〜${labelFri}(金) ［締切:${wedLabel}(水)］`;
                 if (i === 0) text += " ★今週締切分";
-
                 const option = document.createElement('option');
                 option.value = weekVal;
                 option.textContent = text;
                 selector.appendChild(option);
-                
                 if (i === 0) selectedWeek = weekVal;
             }
             if (!selectedWeek && selector.options.length > 0) {
@@ -672,14 +661,13 @@
                 opt.textContent = st.name;
                 selector.appendChild(opt);
             });
-
             if (stores.some(s => s.id === prevSelected)) {
                 selector.value = prevSelected;
             }
             selectedStore = selector.value;
         }
 
-        // ==================== 📝 注文フォーム組み立て ====================
+        // ==================== 📝 注文フォーム・集計・ステータス ====================
 
         function renderOrderInputForm() {
             const container = document.getElementById('orderFormContainer');
@@ -730,7 +718,6 @@
             `;
 
             const days = ['月', '火', '水', '木', '金'];
-
             obentoItems.forEach(item => {
                 html += `
                     <tr class="hover:bg-slate-50/50 transition-colors">
@@ -739,13 +726,8 @@
                             <div class="text-xs text-slate-400 font-semibold">¥${item.price.toLocaleString()}</div>
                         </td>
                 `;
-
                 days.forEach(day => {
-                    let qty = "";
-                    if (currentStoreData[day] && currentStoreData[day][item.id] !== undefined) {
-                        qty = currentStoreData[day][item.id];
-                    }
-
+                    let qty = (currentStoreData[day] && currentStoreData[day][item.id] !== undefined) ? currentStoreData[day][item.id] : "";
                     html += `
                         <td class="p-3 text-center">
                             <input type="number" min="0" max="999" enterkeyhint="next"
@@ -757,13 +739,10 @@
                         </td>
                     `;
                 });
-
                 html += `</tr>`;
             });
-
             html += `</tbody></table></div>`;
             container.innerHTML = html;
-
             setupInputNavigation();
         }
 
@@ -774,12 +753,8 @@
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         const nextInput = inputs[index + 1];
-                        if (nextInput) {
-                            nextInput.focus();
-                            nextInput.select();
-                        } else {
-                            input.blur();
-                        }
+                        if (nextInput) { nextInput.focus(); nextInput.select(); }
+                        else { input.blur(); }
                     }
                 });
             });
@@ -794,33 +769,21 @@
         function saveOrderData(isFinalSubmit) {
             if (!orders[selectedWeek]) orders[selectedWeek] = {};
             if (!orders[selectedWeek][selectedStore]) orders[selectedWeek][selectedStore] = {};
-
             const container = document.getElementById('orderFormContainer');
             const inputs = container.querySelectorAll('input[type="number"]');
-
             const days = ['月', '火', '水', '木', '金'];
-            days.forEach(day => {
-                if (!orders[selectedWeek][selectedStore][day]) orders[selectedWeek][selectedStore][day] = {};
-            });
-
+            days.forEach(day => { if (!orders[selectedWeek][selectedStore][day]) orders[selectedWeek][selectedStore][day] = {}; });
             inputs.forEach(input => {
                 const itemId = input.getAttribute('data-item-id');
                 const day = input.getAttribute('data-day');
                 const val = parseInt(input.value, 10);
-
-                if (!isNaN(val) && val >= 0) {
-                    orders[selectedWeek][selectedStore][day][itemId] = val;
-                } else {
-                    orders[selectedWeek][selectedStore][day][itemId] = 0;
-                }
+                orders[selectedWeek][selectedStore][day][itemId] = (!isNaN(val) && val >= 0) ? val : 0;
             });
-
             orders[selectedWeek][selectedStore].status = isFinalSubmit ? "submitted" : "saving";
-
             saveDataToStorage();
             renderOrderInputForm();
             updateInputStatusStats();
-            showToast(isFinalSubmit ? "注文データを入力完了として確定しました！" : "注文データを下書き保存しました。", "success");
+            showToast(isFinalSubmit ? "確定しました！" : "保存しました。", "success");
         }
 
         function updateStoreFilterOptions() {
@@ -834,9 +797,7 @@
                 opt.textContent = st.name;
                 filter.appendChild(opt);
             });
-            if (prevVal && [...filter.options].some(o => o.value === prevVal)) {
-                filter.value = prevVal;
-            }
+            if (prevVal && [...filter.options].some(o => o.value === prevVal)) { filter.value = prevVal; }
         }
 
         function handleStoreChange() {
@@ -845,257 +806,154 @@
         }
 
         function updateInputStatusStats() {
-            let uninputCount = 0;
-            let savingCount = 0;
-            let submittedCount = 0;
-
+            let counts = { uninput: 0, saving: 0, submitted: 0 };
             const weekData = orders[selectedWeek] || {};
-
             stores.forEach(st => {
-                const stData = weekData[st.id];
-                if (!stData || stData.status === 'uninput') {
-                    uninputCount++;
-                } else if (stData.status === 'saving') {
-                    savingCount++;
-                } else if (stData.status === 'submitted') {
-                    submittedCount++;
-                }
+                const status = (weekData[st.id] && weekData[st.id].status) ? weekData[st.id].status : 'uninput';
+                counts[status]++;
             });
-
-            const elUn = document.getElementById('statUninput');
-            const elSa = document.getElementById('statSaving');
-            const elSu = document.getElementById('statSubmitted');
-            if(elUn) elUn.textContent = uninputCount;
-            if(elSa) elSa.textContent = savingCount;
-            if(elSu) elSu.textContent = submittedCount;
+            if(document.getElementById('statUninput')) document.getElementById('statUninput').textContent = counts.uninput;
+            if(document.getElementById('statSaving')) document.getElementById('statSaving').textContent = counts.saving;
+            if(document.getElementById('statSubmitted')) document.getElementById('statSubmitted').textContent = counts.submitted;
         }
 
-        // ==================== 📊 集計ロジック系 ====================
-
         function updateSummaryData() {
-            const filterStoreElement = document.getElementById('filterStore');
-            const filterDayElement = document.getElementById('filterDay');
-            if(!filterStoreElement || !filterDayElement) return;
-
-            const filterStoreId = filterStoreElement.value;
-            const filterDayId = filterDayElement.value;
+            const filterStoreId = document.getElementById('filterStore').value;
+            const filterDayId = document.getElementById('filterDay').value;
             const weekData = orders[selectedWeek] || {};
-
             const days = ['月', '火', '水', '木', '金'];
-
             const itemTotals = {};
-            obentoItems.forEach(it => {
-                itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 };
-            });
-
+            obentoItems.forEach(it => { itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 }; });
             stores.forEach(st => {
                 if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
-
                 const stData = weekData[st.id];
                 if (!stData) return;
-
                 days.forEach(day => {
                     if (filterDayId !== 'all' && day !== filterDayId) return;
-
                     const dayData = stData[day];
                     if (!dayData) return;
-
-                    obentoItems.forEach(it => {
-                        if (dayData[it.id] !== undefined) {
-                            itemTotals[it.id].qty += dayData[it.id];
-                        }
-                    });
+                    obentoItems.forEach(it => { if (dayData[it.id]) itemTotals[it.id].qty += dayData[it.id]; });
                 });
             });
-
             const itemTableBody = document.getElementById('summaryItemTableBody');
-            if(!itemTableBody) return;
             itemTableBody.innerHTML = '';
-            
-            let totalOverallMoney = 0;
-
+            let totalMoney = 0;
             obentoItems.forEach(it => {
                 const record = itemTotals[it.id];
                 const money = record.qty * record.price;
-                totalOverallMoney += money;
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5 font-bold text-slate-800">${record.name}</td>
-                    <td class="p-3 text-right text-xs text-slate-400 font-semibold">¥${record.price.toLocaleString()}</td>
-                    <td class="p-3 text-center bg-blue-50/30 text-blue-700 font-bold text-base">${record.qty.toLocaleString()}</td>
-                    <td class="p-3 text-right pr-5 text-slate-800 font-bold">¥${money.toLocaleString()}</td>
+                totalMoney += money;
+                itemTableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="p-3 pl-5 font-bold text-slate-800">${record.name}</td>
+                        <td class="p-3 text-right text-xs text-slate-400 font-semibold">¥${record.price.toLocaleString()}</td>
+                        <td class="p-3 text-center bg-blue-50/30 text-blue-700 font-bold text-base">${record.qty.toLocaleString()}</td>
+                        <td class="p-3 text-right pr-5 text-slate-800 font-bold">¥${money.toLocaleString()}</td>
+                    </tr>
                 `;
-                itemTableBody.appendChild(tr);
             });
-
-            const trTotal = document.createElement('tr');
-            trTotal.className = "bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900";
-            trTotal.innerHTML = `
-                <td class="p-4 pl-5 text-sm" colspan="2">合計金額総合計 (税込)</td>
-                <td class="p-4 text-center text-slate-400 font-medium text-xs">ー</td>
-                <td class="p-4 text-right pr-5 text-base text-blue-700">¥${totalOverallMoney.toLocaleString()}</td>
+            itemTableBody.innerHTML += `
+                <tr class="bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900">
+                    <td class="p-4 pl-5 text-sm" colspan="2">合計金額総合計</td>
+                    <td class="p-4 text-center text-slate-400 font-medium text-xs">ー</td>
+                    <td class="p-4 text-right pr-5 text-base text-blue-700">¥${totalMoney.toLocaleString()}</td>
+                </tr>
             `;
-            itemTableBody.appendChild(trTotal);
-
             const storeTableBody = document.getElementById('summaryStoreTableBody');
-            if(!storeTableBody) return;
             storeTableBody.innerHTML = '';
-
             stores.forEach(st => {
                 const stData = weekData[st.id];
-                const status = stData ? stData.status : 'uninput';
-                
-                let storeMoney = 0;
+                let money = 0;
                 if (stData) {
                     days.forEach(day => {
                         const dayData = stData[day];
-                        if (!dayData) return;
-                        obentoItems.forEach(it => {
-                            if (dayData[it.id] !== undefined) {
-                                storeMoney += dayData[it.id] * it.price;
-                            }
-                        });
+                        if (dayData) obentoItems.forEach(it => { if (dayData[it.id]) money += dayData[it.id] * it.price; });
                     });
                 }
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5 font-bold text-slate-800 text-xs">${st.name}</td>
-                    <td class="p-3 text-center">${getStatusBadgeHTML(status)}</td>
-                    <td class="p-3 text-right pr-5 font-bold text-slate-700 text-xs">¥${storeMoney.toLocaleString()}</td>
+                storeTableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="p-3 pl-5 font-bold text-slate-800 text-xs">${st.name}</td>
+                        <td class="p-3 text-center">${getStatusBadgeHTML(stData ? stData.status : 'uninput')}</td>
+                        <td class="p-3 text-right pr-5 font-bold text-slate-700 text-xs">¥${money.toLocaleString()}</td>
+                    </tr>
                 `;
-                storeTableBody.appendChild(tr);
             });
         }
 
-        // ==================== 🍚 製造指示書ロジック ====================
+        // ==================== 🍚 製造指示書・材料集計 ====================
 
         function updateProductionData() {
             const weekData = orders[selectedWeek] || {};
             const days = ['月', '火', '水', '木', '金'];
             const dayMap = { '月': 'mon', '火': 'tue', '水': 'wed', '木': 'thu', '金': 'fri' };
-
-            // 集計用データの初期化
             const aggregated = {};
-            Object.keys(PRODUCTION_CONFIG).forEach(key => {
-                aggregated[key] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
-            });
+            Object.keys(PRODUCTION_CONFIG).forEach(key => { aggregated[key] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 }; });
 
-            // 集計実行
             stores.forEach(st => {
                 const stData = weekData[st.id];
                 if (!stData) return;
-
                 days.forEach(day => {
                     const dayData = stData[day];
                     if (!dayData) return;
                     const dayKey = dayMap[day];
-
                     obentoItems.forEach(it => {
                         const qty = dayData[it.id] || 0;
                         if (qty === 0 || !it.prodTypes) return;
-
                         it.prodTypes.forEach(typeKey => {
                             if (aggregated[typeKey]) {
-                                aggregated[typeKey][dayKey] += qty;
+                                // マスタで設定された個別係数を使用（なければデフォルト、なければ1）
+                                const factor = (it.factors && it.factors[typeKey] !== undefined) ? parseFloat(it.factors[typeKey]) : (PRODUCTION_CONFIG[typeKey].factor || 1);
+                                aggregated[typeKey][dayKey] += qty * factor;
                             }
                         });
                     });
                 });
             });
 
-            // UI更新関数: 計算と単位適用
             const formatVal = (key, rawVal) => {
                 if (rawVal === 0) return "0";
                 const config = PRODUCTION_CONFIG[key];
-                const calculated = Math.ceil(rawVal * config.factor);
+                const calculated = Math.ceil(rawVal); // 各商品ごとの計算時に端数が出る可能性はあるが、ここでは合計を切り上げ
                 return `${calculated.toLocaleString()}${config.unit}`;
             };
 
-            // ご飯UI更新
             days.forEach(day => {
                 const dayKey = dayMap[day];
                 document.getElementById(`prod_rice_${dayKey}`).textContent = formatVal('rice', aggregated.rice[dayKey]);
                 document.getElementById(`prod_onigiri_${dayKey}`).textContent = formatVal('onigiri', aggregated.onigiri[dayKey]);
             });
 
-            // 材料表UI更新
             const materialBody = document.getElementById('productionMaterialBody');
             materialBody.innerHTML = '';
             MATERIAL_ITEMS.forEach(m => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-200";
-                tr.innerHTML = `
-                    <td class="p-3 font-bold bg-slate-50 border-r border-slate-200 text-sm">${PRODUCTION_CONFIG[m].name}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].mon)}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].tue)}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].wed)}</td>
-                    <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].thu)}</td>
-                    <td class="p-3 text-center text-xl font-black">${formatVal(m, aggregated[m].fri)}</td>
+                materialBody.innerHTML += `
+                    <tr class="border-b border-slate-200">
+                        <td class="p-3 font-bold bg-slate-50 border-r border-slate-200 text-sm">${PRODUCTION_CONFIG[m].name}</td>
+                        <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].mon)}</td>
+                        <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].tue)}</td>
+                        <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].wed)}</td>
+                        <td class="p-3 text-center text-xl font-black border-r border-slate-200">${formatVal(m, aggregated[m].thu)}</td>
+                        <td class="p-3 text-center text-xl font-black">${formatVal(m, aggregated[m].fri)}</td>
+                    </tr>
                 `;
-                materialBody.appendChild(tr);
             });
 
-            // 対象商品情報の表示
             const infoContainer = document.getElementById('productionTargetInfo');
-            if (infoContainer) {
-                let infoHtml = '';
-                Object.keys(PRODUCTION_CONFIG).forEach(key => {
-                    const matched = obentoItems.filter(it => it.prodTypes && it.prodTypes.includes(key));
-                    if (matched.length > 0) {
-                        const config = PRODUCTION_CONFIG[key];
-                        const calcInfo = config.factor !== 1 ? ` (×${config.factor}${config.unit ? ' '+config.unit : ''}・切上げ)` : '';
-                        infoHtml += `<div><span class="font-bold">[${config.name}${calcInfo}対象]:</span> ${matched.map(it => it.name).join(', ')}</div>`;
-                    }
-                });
-
-                if (!infoHtml) infoHtml = '※マスタ管理から集計対象商品を設定してください。';
-                infoContainer.innerHTML = infoHtml;
-            }
-        }
-
-        function exportToCSV() {
-            const filterStoreId = document.getElementById('filterStore').value;
-            const filterDayId = document.getElementById('filterDay').value;
-            const weekData = orders[selectedWeek] || {};
-            const days = ['月', '火', '水', '木', '金'];
-
-            let csvContent = "\uFEFF商品名,単価,曜日,店舗名,発注数量,小計\n";
-
-            obentoItems.forEach(it => {
-                stores.forEach(st => {
-                    if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
-                    
-                    const stData = weekData[st.id];
-                    if (!stData) return;
-
-                    days.forEach(day => {
-                        if (filterDayId !== 'all' && day !== filterDayId) return;
-
-                        const dayData = stData[day];
-                        if (!dayData || dayData[it.id] === undefined || dayData[it.id] === 0) return;
-
-                        const qty = dayData[it.id];
-                        const subtotal = qty * it.price;
-                        csvContent += `"${it.name}",${it.price},"${day}曜日","${st.name}",${qty},${subtotal}\n`;
-                    });
-                });
+            let infoHtml = '';
+            Object.keys(PRODUCTION_CONFIG).forEach(key => {
+                const matched = obentoItems.filter(it => it.prodTypes && it.prodTypes.includes(key));
+                if (matched.length > 0) {
+                    const config = PRODUCTION_CONFIG[key];
+                    const details = matched.map(it => {
+                        const factor = (it.factors && it.factors[key] !== undefined) ? it.factors[key] : (config.factor || 1);
+                        return `${it.name}(×${factor})`;
+                    }).join(', ');
+                    infoHtml += `<div><span class="font-bold">[${config.name} (${config.unit || '個'})]:</span> ${details}</div>`;
+                }
             });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `お弁当注文集計_${selectedWeek}_店舗-${filterStoreId}_曜日-${filterDayId}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            infoContainer.innerHTML = infoHtml || '※マスタ管理から集計対象商品を設定してください。';
         }
 
-        // ==================== 🔐 マスタセキュリティ・管理系 ====================
+        // ==================== 🔐 マスタ管理・セキュリティ ====================
 
         function verifyMasterPassword() {
             const input = document.getElementById('inputMasterPassword');
@@ -1104,321 +962,185 @@
                 document.getElementById('masterPasswordLock').classList.add('hidden');
                 document.getElementById('masterConfigContent').classList.remove('hidden');
                 renderMasterTables();
-                showToast("マスターマスタ認証に成功しました。", "success");
-            } else {
-                showToast("パスワードが一致しません。", "error");
-                input.value = "";
-            }
-        }
-
-        function changeMasterPasswordPrompt() {
-            const newPass = prompt("新しいマスターパスワードを入力してください:", masterPassword);
-            if (newPass === null) return;
-            if (newPass.trim() === "") {
-                showToast("空のパスワードは設定できません。", "error");
-                return;
-            }
-            masterPassword = newPass.trim();
-            saveDataToStorage();
-            showToast("マスターパスワードを変更し、クラウドに保存しました。", "success");
-        }
-
-        function clearAllSystemData() {
-            if (!confirm("⚠️警告: クラウド上のすべての注文履歴、商品マスタ、店舗マスタが初期化されます。本当によろしいですか？")) return;
-            if (prompt("確認のため『初期化』と入力してください:") !== "初期化") {
-                showToast("処理がキャンセルされました。", "info");
-                return;
-            }
-
-            orders = {};
-            saveDataToStorage();
-            showToast("システムデータをリセットしました。", "success");
-            handleWeekChange();
+            } else { showToast("パスワードが違います。", "error"); input.value = ""; }
         }
 
         function renderMasterTables() {
             const itemBody = document.getElementById('masterItemTableBody');
-            if(!itemBody) return;
             itemBody.innerHTML = '';
             obentoItems.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50";
-                
                 let prodTypeLabel = '<span class="text-[10px] text-slate-300 italic">未設定</span>';
                 if (item.prodTypes && item.prodTypes.length > 0) {
                     prodTypeLabel = '<div class="flex flex-wrap gap-1 justify-center">';
-                    item.prodTypes.forEach(typeKey => {
-                        const config = PRODUCTION_CONFIG[typeKey];
-                        if (config) {
-                            let colorClass = "bg-slate-100 text-slate-700";
-                            if (typeKey === 'rice') colorClass = "bg-blue-100 text-blue-700";
-                            if (typeKey === 'onigiri') colorClass = "bg-orange-100 text-orange-700";
-                            prodTypeLabel += `<span class="${colorClass} text-[10px] px-2 py-0.5 rounded-full font-bold">${config.name.replace('（個）','')}</span>`;
-                        }
+                    item.prodTypes.forEach(key => {
+                        const factor = (item.factors && item.factors[key] !== undefined) ? item.factors[key] : (PRODUCTION_CONFIG[key].factor || 1);
+                        prodTypeLabel += `<span class="bg-slate-100 text-slate-700 text-[10px] px-2 py-0.5 rounded-full font-bold">${PRODUCTION_CONFIG[key].name.replace('（個）','')}×${factor}</span>`;
                     });
                     prodTypeLabel += '</div>';
                 }
-
-                tr.innerHTML = `
-                    <td class="p-3 pl-5">
-                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${item.id}</div>
-                        <div class="text-sm font-bold text-slate-800">${item.name}</div>
-                    </td>
-                    <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
-                    <td class="p-3 text-center">${prodTypeLabel}</td>
-                    <td class="p-3 text-center pr-5">
-                        <div class="flex gap-1 justify-center">
-                            <button onclick="moveItem(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
-                            <button onclick="moveItem(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === obentoItems.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === obentoItems.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
-                            <button onclick="openItemModal(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
+                itemBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="p-3 pl-5"><div class="text-[10px] text-slate-400 font-bold">${item.id}</div><div class="text-sm font-bold text-slate-800">${item.name}</div></td>
+                        <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
+                        <td class="p-3 text-center">${prodTypeLabel}</td>
+                        <td class="p-3 text-center pr-5">
+                            <button onclick="openItemModal(${index})" class="text-blue-600 hover:bg-blue-50 w-8 h-8 rounded-md"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-8 h-8 rounded-md"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
                 `;
-                itemBody.appendChild(tr);
             });
 
             const storeBody = document.getElementById('masterStoreTableBody');
-            if(!storeBody) return;
             storeBody.innerHTML = '';
             stores.forEach((store, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50";
-                tr.innerHTML = `
-                    <td class="p-3 pl-5">
-                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">${store.id}</div>
-                        <div class="text-sm font-bold text-slate-800">${store.name}</div>
-                    </td>
-                    <td class="p-3 text-center pr-5">
-                        <div class="flex gap-1 justify-center">
-                            <button onclick="moveStore(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
-                            <button onclick="moveStore(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === stores.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === stores.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
-                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
+                storeBody.innerHTML += `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="p-3 pl-5"><div class="text-[10px] text-slate-400 font-bold">${store.id}</div><div class="text-sm font-bold text-slate-800">${store.name}</div></td>
+                        <td class="p-3 text-center pr-5">
+                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-8 h-8 rounded-md"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-8 h-8 rounded-md"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
                 `;
-                storeBody.appendChild(tr);
             });
         }
 
-        // 並び替え機能（商品）
-        function moveItem(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= obentoItems.length) return;
-            
-            const temp = obentoItems[index];
-            obentoItems[index] = obentoItems[newIndex];
-            obentoItems[newIndex] = temp;
-            
-            saveDataToStorage();
-            renderMasterTables();
-            renderOrderInputForm();
-            updateSummaryData();
-        }
-
-        // 並び替え機能（店舗）
-        function moveStore(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= stores.length) return;
-            
-            const temp = stores[index];
-            stores[index] = stores[newIndex];
-            stores[newIndex] = temp;
-            
-            saveDataToStorage();
-            renderMasterTables();
-            renderStoreSelector();
-            updateStoreFilterOptions();
-        }
-
-        function addNewItemPrompt() {
-            const name = prompt("新規追加するお弁当の商品名を入力してください:");
-            if (!name) return;
-            const priceStr = prompt(`「${name}」の税込単価(半角数字)を入力してください:`, "500");
-            if (!priceStr) return;
-            const price = parseInt(priceStr, 10);
-            if (isNaN(price) || price < 0) {
-                showToast("不正な金額が入力されました。", "error");
-                return;
-            }
-
-            const newId = "ITEM" + String(Date.now()).slice(-6);
-
-            obentoItems.push({ id: newId, name: name.trim(), price: price, prodTypes: [] });
-            saveDataToStorage();
-            renderMasterTables();
-            showToast(`新規商品「${name}」を追加登録しました。`, "success");
-        }
-
-        // 商品編集モーダル制御
         function openItemModal(index) {
             const item = obentoItems[index];
             document.getElementById('editItemIndex').value = index;
             document.getElementById('editItemName').value = item.name;
             document.getElementById('editItemPrice').value = item.price;
-            
-            // チェックボックス生成
             const container = document.getElementById('editItemProdTypes');
             container.innerHTML = '';
             
             Object.keys(PRODUCTION_CONFIG).forEach(key => {
                 const config = PRODUCTION_CONFIG[key];
                 const isChecked = item.prodTypes && item.prodTypes.includes(key);
+                const factorVal = (item.factors && item.factors[key] !== undefined) ? item.factors[key] : (config.factor || 1);
+                
                 const div = document.createElement('div');
-                div.className = "flex items-center gap-2";
+                div.className = `flex items-center justify-between p-2 rounded-lg border ${isChecked ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-100'}`;
                 div.innerHTML = `
-                    <input type="checkbox" id="chk_${key}" value="${key}" ${isChecked ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                    <label for="chk_${key}" class="text-xs font-bold text-slate-700 cursor-pointer">${config.name.replace('（個）','')}</label>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="chk_${key}" value="${key}" ${isChecked ? 'checked' : ''} onchange="toggleFactorInput('${key}')" class="w-5 h-5 rounded border-slate-300 text-blue-600">
+                        <label for="chk_${key}" class="text-sm font-bold text-slate-700 cursor-pointer">${config.name}</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-400 font-bold">掛ける数字:</span>
+                        <input type="number" id="factor_${key}" step="0.01" value="${factorVal}" ${!isChecked ? 'disabled' : ''} class="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-center text-sm font-bold focus:ring-2 focus:ring-blue-500">
+                        <span class="text-xs text-slate-500 w-6">${config.unit || '個'}</span>
+                    </div>
                 `;
                 container.appendChild(div);
             });
-
             document.getElementById('modalItemEdit').classList.remove('hidden');
         }
 
-        function closeItemModal() {
-            document.getElementById('modalItemEdit').classList.add('hidden');
+        function toggleFactorInput(key) {
+            const chk = document.getElementById(`chk_${key}`);
+            const input = document.getElementById(`factor_${key}`);
+            input.disabled = !chk.checked;
+            chk.parentElement.parentElement.className = `flex items-center justify-between p-2 rounded-lg border ${chk.checked ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-100'}`;
         }
+
+        function closeItemModal() { document.getElementById('modalItemEdit').classList.add('hidden'); }
 
         function saveItemEdit() {
             const index = document.getElementById('editItemIndex').value;
             const name = document.getElementById('editItemName').value;
             const price = parseInt(document.getElementById('editItemPrice').value, 10);
-            
-            // チェックされた項目を取得
             const checkedTypes = [];
+            const factors = {};
             Object.keys(PRODUCTION_CONFIG).forEach(key => {
                 if (document.getElementById(`chk_${key}`).checked) {
                     checkedTypes.push(key);
+                    const f = parseFloat(document.getElementById(`factor_${key}`).value);
+                    factors[key] = !isNaN(f) ? f : 1;
                 }
             });
-
-            if (!name || isNaN(price) || price < 0) {
-                showToast("入力内容に不備があります。", "error");
-                return;
-            }
-
+            if (!name || isNaN(price)) { showToast("入力不備があります。", "error"); return; }
             obentoItems[index].name = name.trim();
             obentoItems[index].price = price;
             obentoItems[index].prodTypes = checkedTypes;
-
+            obentoItems[index].factors = factors;
             saveDataToStorage();
             renderMasterTables();
             updateSummaryData();
             updateProductionData();
             closeItemModal();
-            showToast("商品情報を更新しました。", "success");
         }
 
         function deleteItemAction(index) {
-            const item = obentoItems[index];
-            if (!confirm(`本当に「${item.name}」をマスタから削除しますか？\n(注: 過去の注文集計データ等で数値の歪みが出る場合があります)`)) return;
-            obentoItems.splice(index, 1);
+            if (confirm("削除しますか？")) { obentoItems.splice(index, 1); saveDataToStorage(); renderMasterTables(); }
+        }
+
+        function addNewItemPrompt() {
+            const name = prompt("商品名:");
+            if (!name) return;
+            obentoItems.push({ id: "ITEM" + Date.now().toString().slice(-6), name: name, price: 500, prodTypes: [], factors: {} });
             saveDataToStorage();
             renderMasterTables();
-            showToast("マスタから商品を削除しました。", "success");
         }
 
         function addNewStorePrompt() {
-            const name = prompt("新規追加する店舗名を入力してください:");
+            const name = prompt("店舗名:");
             if (!name) return;
-
-            const newId = "STORE" + String(Date.now()).slice(-6);
-
-            stores.push({ id: newId, name: name.trim() });
+            stores.push({ id: "STORE" + Date.now().toString().slice(-6), name: name });
             saveDataToStorage();
             renderMasterTables();
-            showToast(`新規店舗「${name}」を追加登録しました。`, "success");
+            renderStoreSelector();
+            updateStoreFilterOptions();
         }
 
         function editStorePrompt(index) {
-            const store = stores[index];
-            const name = prompt("店舗名を変更:", store.name);
-            if (!name) return;
-
-            stores[index].name = name.trim();
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("店舗情報を更新しました。", "success");
+            const name = prompt("店舗名:", stores[index].name);
+            if (name) { stores[index].name = name; saveDataToStorage(); renderMasterTables(); renderStoreSelector(); updateStoreFilterOptions(); }
         }
 
         function deleteStoreAction(index) {
-            const store = stores[index];
-            if (!confirm(`本当に「${store.name}」を登録マスタから削除しますか？`)) return;
-            stores.splice(index, 1);
-            saveDataToStorage();
-            renderMasterTables();
-            showToast("マスタから店舗を削除しました。", "success");
+            if (confirm("削除しますか？")) { stores.splice(index, 1); saveDataToStorage(); renderMasterTables(); renderStoreSelector(); updateStoreFilterOptions(); }
         }
 
-        // ==================== 🔔 通知UI表示制御 ====================
+        function changeMasterPasswordPrompt() {
+            const p = prompt("新パスワード:", masterPassword);
+            if (p) { masterPassword = p; saveDataToStorage(); }
+        }
 
-        function showToast(message, type = 'info') {
-            const toast = document.getElementById('toast');
-            const toastText = document.getElementById('toastText');
-            const toastIcon = document.getElementById('toastIcon');
-
-            if(!toast || !toastText || !toastIcon) return;
-            toastText.textContent = message;
-
-            if (type === 'success') {
-                toastIcon.innerHTML = `<i class="fa-solid fa-circle-check text-green-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
-            } else if (type === 'error') {
-                toastIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-red-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-red-700 transition-all duration-300";
-            } else {
-                toastIcon.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i>`;
-                toast.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300";
+        function clearAllSystemData() {
+            if (confirm("全データを初期化しますか？") && prompt("『初期化』と入力:") === "初期化") {
+                orders = {}; saveDataToStorage(); handleWeekChange();
             }
+        }
 
+        function showToast(m, t = 'info') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastText').textContent = m;
             toast.classList.remove('hidden');
             toast.style.opacity = "1";
-
-            setTimeout(() => {
-                toast.style.opacity = "0";
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                }, 300);
-            }, 4000);
+            setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
         }
-
-        // ==================== 🚀 アプリ起動処理 ====================
 
         window.onload = function() {
             const now = new Date();
             const days = ['日', '月', '火', '水', '木', '金', '土'];
-            const elDate = document.getElementById('currentDateDisplay');
-            if(elDate) {
-                elDate.innerHTML = `
-                    <i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})
-                `;
-            }
-
+            document.getElementById('currentDateDisplay').innerHTML = `<i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getUTCDay()]})`;
             initWeekSelector();
             initFirebaseSync();
         };
 
         function updateDayOptions() {
             const filterDayElement = document.getElementById('filterDay');
-            if (!filterDayElement) return;
-
             const [year, weekNum] = selectedWeek.split('-W').map(Number);
             const jan4 = new Date(year, 0, 4);
             const dayOfJan4 = jan4.getDay() || 7;
-            const firstMonday = new Date(jan4.getTime() - (dayOfJan4 - 1) * 86400000);
-            const monday = new Date(firstMonday.getTime() + (weekNum - 1) * 7 * 86400000 + (7 * 86400000));
-
+            const monday = new Date(jan4.getTime() - (dayOfJan4 - 1) * 86400000 + (weekNum - 1) * 7 * 86400000 + (7 * 86400000));
             const days = ['月', '火', '水', '木', '金'];
             const currentVal = filterDayElement.value;
             filterDayElement.innerHTML = '<option value="all">全曜日</option>';
-
-            days.forEach((day, index) => {
-                let date = new Date(monday);
-                date.setDate(monday.getDate() + index);
-                const dateDisplay = `${date.getMonth() + 1}/${date.getDate()}`;
-                filterDayElement.innerHTML += `<option value="${day}">${dateDisplay} (${day})</option>`;
+            days.forEach((day, i) => {
+                let d = new Date(monday); d.setDate(monday.getDate() + i);
+                filterDayElement.innerHTML += `<option value="${day}">${d.getMonth()+1}/${d.getDate()} (${day})</option>`;
             });
             filterDayElement.value = currentVal;
         }
@@ -1427,54 +1149,41 @@
             const filterDayElement = document.getElementById('filterDay');
             const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
             const storeVerticalTotals = new Array(stores.length).fill(0);
-
             const printWindow = window.open('', '_blank');
-
-            const css = `
-                <style>
-                    @page { size: A4 portrait; margin: 10mm; }
-                    body { font-family: sans-serif; font-size: 10px; color: #000; margin: 0; padding: 20px; }
-                    h2 { font-size: 16px; margin-bottom: 5px; }
-                    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                    th { background-color: #94a3b8 !important; border: 1px solid #000 !important; padding: 6px; text-align: center; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    td { border: 1px solid #000 !important; padding: 4px; text-align: center; }
-                    tr:nth-child(even) { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .total-col { background-color: #cbd5e1 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .footer-row { background-color: #475569 !important; color: #fff !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                </style>
-            `;
-
-            let html = `<html><head><title>お弁当発注一覧</title>${css}</head><body>`;
-            html += `<h2>お弁当発注一覧</h2><p>対象日: ${dayLabel}</p><table><thead><tr><th style="width: 20%;">商品名</th><th class="total-col" style="width: 10%;">合計</th>`;
+            let html = `<html><head><title>発注一覧</title><style>table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:5px;text-align:center;}</style></head><body>`;
+            html += `<h2>発注一覧 (${dayLabel})</h2><table><thead><tr><th>商品名</th><th>合計</th>`;
             stores.forEach(st => { html += `<th>${st.name}</th>`; });
             html += `</tr></thead><tbody>`;
-
             obentoItems.forEach(it => {
-                html += `<tr><td style="text-align: left; font-weight: bold; padding-left: 5px;">${it.name}</td>`;
                 let rowTotal = 0;
-                let storeCols = "";
+                let cols = "";
                 stores.forEach((st, idx) => {
-                    const stData = orders[selectedWeek] ? orders[selectedWeek][st.id] : null;
-                    const qty = (stData && stData[filterDayElement.value]) ? (stData[filterDayElement.value][it.id] || 0) : 0;
-                    storeVerticalTotals[idx] += qty;
-                    rowTotal += qty;
-                    storeCols += `<td>${qty}</td>`;
+                    const q = (orders[selectedWeek] && orders[selectedWeek][st.id] && orders[selectedWeek][st.id][filterDayElement.value]) ? (orders[selectedWeek][st.id][filterDayElement.value][it.id] || 0) : 0;
+                    rowTotal += q; storeVerticalTotals[idx] += q; cols += `<td>${q}</td>`;
                 });
-                html += `<td class="total-col">${rowTotal}</td>${storeCols}</tr>`;
+                html += `<tr><td>${it.name}</td><td>${rowTotal}</td>${cols}</tr>`;
             });
-
-            html += `<tr class="footer-row"><td>総合計</td><td class="total-col">${storeVerticalTotals.reduce((a, b) => a + b, 0)}</td>`;
-            storeVerticalTotals.forEach(total => { html += `<td>${total}</td>`; });
+            html += `<tr><td>総合計</td><td>${storeVerticalTotals.reduce((a,b)=>a+b,0)}</td>`;
+            storeVerticalTotals.forEach(t => { html += `<td>${t}</td>`; });
             html += `</tr></tbody></table></body></html>`;
-
-            printWindow.document.open();
             printWindow.document.write(html);
             printWindow.document.close();
-            
-            printWindow.onload = function() {
-                printWindow.focus();
-                printWindow.print();
-            };
+            printWindow.print();
+        }
+
+        function exportToCSV() {
+            let csv = "\uFEFF商品名,単価,曜日,店舗名,数量\n";
+            const weekData = orders[selectedWeek] || {};
+            obentoItems.forEach(it => {
+                stores.forEach(st => {
+                    ['月','火','水','木','金'].forEach(day => {
+                        const q = (weekData[st.id] && weekData[st.id][day]) ? weekData[st.id][day][it.id] : 0;
+                        if(q) csv += `"${it.name}",${it.price},"${day}","${st.name}",${q}\n`;
+                    });
+                });
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "export.csv"; a.click();
         }
     </script>
 </body>
