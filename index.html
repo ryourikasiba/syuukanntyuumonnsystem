@@ -174,7 +174,7 @@
             </div>
 
             <div class="mt-4 flex gap-2">
-                <button onclick="printSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
+                <button onclick="printSummaryWindow()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
                     <i class="fa-solid fa-print"></i> 印刷用一覧を表示
                 </button>
             </div>
@@ -245,7 +245,7 @@
                             <p class="text-xs text-slate-400">曜日別製造数合計（ご飯・材料）</p>
                         </div>
                     </div>
-                    <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-2">
+                    <button onclick="printProductionWindow()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-2">
                         <i class="fa-solid fa-print"></i> 指示書を印刷
                     </button>
                 </div>
@@ -369,7 +369,7 @@
                                         <th class="p-3 pl-5">商品コード / 商品名</th>
                                         <th class="p-3 text-right">単価</th>
                                         <th class="p-3 text-center">製造指示設定</th>
-                                        <th class="p-3 text-center pr-5 w-32">操作</th>
+                                        <th class="p-3 text-center pr-5 w-40">操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="masterItemTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -393,7 +393,7 @@
                                 <thead>
                                     <tr class="bg-slate-100/50 text-slate-500 text-xs font-bold border-b border-slate-100">
                                         <th class="p-3 pl-5">店舗コード / 店舗名</th>
-                                        <th class="p-3 text-center pr-5 w-32">操作</th>
+                                        <th class="p-3 text-center pr-5 w-40">操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="masterStoreTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -459,7 +459,7 @@
             "onigiri": { name: "おにぎり（個）", factor: 1, unit: "" },
             "焼きそば麺": { name: "焼きそば麺", factor: 1.3, unit: "" },
             "オムライスシート": { name: "オムライスシート", factor: 1, unit: "" },
-            "鶏唐揚げ": { name: "鶏唐揚げ", factor: 1, unit: "" }, // 係数削除、デフォルト1
+            "鶏唐揚げ": { name: "鶏唐揚げ", factor: 1, unit: "" },
             "チキンライス": { name: "チキンライス", factor: 0.25, unit: "kg" },
             "チャーハン": { name: "チャーハン", factor: 0.25, unit: "kg" },
             "ハンバーグ60ｇ": { name: "ハンバーグ60ｇ", factor: 1, unit: "" },
@@ -470,7 +470,7 @@
             "盛合せフライ": { name: "盛合せフライ", factor: 1, unit: "" },
             "さば味噌煮": { name: "さば味噌煮", factor: 1, unit: "" },
             "鶏280/300": { name: "鶏280/300", factor: 0.5, unit: "枚" },
-            "牛肉": { name: "牛肉", factor: 1, unit: "g" }, // 係数削除、デフォルト1
+            "牛肉": { name: "牛肉", factor: 1, unit: "g" },
             "タレ付き焼肉": { name: "タレ付き焼肉", factor: 120, unit: "g" },
             "チキンカツ55ｇ": { name: "チキンカツ55ｇ", factor: 1, unit: "" },
             "卵": { name: "卵", factor: 4, unit: "" },
@@ -768,36 +768,25 @@
 
         function saveOrderData(isFinalSubmit) {
             if (!orders[selectedWeek]) orders[selectedWeek] = {};
-            if (!orders[selectedWeek][selectedStore]) orders[selectedWeek][selectedStore] = {};
-            const container = document.getElementById('orderFormContainer');
-            const inputs = container.querySelectorAll('input[type="number"]');
+            if (!orders[selectedWeek][selectedStore]) orders[selectedWeek][selectedStore] = { status: "uninput" };
+            const storeData = orders[selectedWeek][selectedStore];
             const days = ['月', '火', '水', '木', '金'];
-            days.forEach(day => { if (!orders[selectedWeek][selectedStore][day]) orders[selectedWeek][selectedStore][day] = {}; });
-            inputs.forEach(input => {
-                const itemId = input.getAttribute('data-item-id');
-                const day = input.getAttribute('data-day');
-                const val = parseInt(input.value, 10);
-                orders[selectedWeek][selectedStore][day][itemId] = (!isNaN(val) && val >= 0) ? val : 0;
+            
+            days.forEach(day => {
+                if (!storeData[day]) storeData[day] = {};
+                const inputs = document.querySelectorAll(`input[data-day="${day}"]`);
+                inputs.forEach(input => {
+                    const itemId = input.getAttribute('data-item-id');
+                    const qty = parseInt(input.value) || 0;
+                    storeData[day][itemId] = qty;
+                });
             });
-            orders[selectedWeek][selectedStore].status = isFinalSubmit ? "submitted" : "saving";
+            
+            storeData.status = isFinalSubmit ? 'submitted' : 'saving';
             saveDataToStorage();
             renderOrderInputForm();
             updateInputStatusStats();
-            showToast(isFinalSubmit ? "確定しました！" : "保存しました。", "success");
-        }
-
-        function updateStoreFilterOptions() {
-            const filter = document.getElementById('filterStore');
-            if(!filter) return;
-            const prevVal = filter.value;
-            filter.innerHTML = '<option value="all">すべての店舗</option>';
-            stores.forEach(st => {
-                const opt = document.createElement('option');
-                opt.value = st.id;
-                opt.textContent = st.name;
-                filter.appendChild(opt);
-            });
-            if (prevVal && [...filter.options].some(o => o.value === prevVal)) { filter.value = prevVal; }
+            showToast(isFinalSubmit ? '注文を確定しました！' : '下書きを保存しました。', 'success');
         }
 
         function handleStoreChange() {
@@ -806,50 +795,67 @@
         }
 
         function updateInputStatusStats() {
-            let counts = { uninput: 0, saving: 0, submitted: 0 };
             const weekData = orders[selectedWeek] || {};
+            let uninput = 0, saving = 0, submitted = 0;
             stores.forEach(st => {
-                const status = (weekData[st.id] && weekData[st.id].status) ? weekData[st.id].status : 'uninput';
-                counts[status]++;
+                const stData = weekData[st.id];
+                const status = stData ? stData.status : 'uninput';
+                if (status === 'submitted') submitted++;
+                else if (status === 'saving') saving++;
+                else uninput++;
             });
-            if(document.getElementById('statUninput')) document.getElementById('statUninput').textContent = counts.uninput;
-            if(document.getElementById('statSaving')) document.getElementById('statSaving').textContent = counts.saving;
-            if(document.getElementById('statSubmitted')) document.getElementById('statSubmitted').textContent = counts.submitted;
+            document.getElementById('statUninput').textContent = uninput;
+            document.getElementById('statSaving').textContent = saving;
+            document.getElementById('statSubmitted').textContent = submitted;
+        }
+
+        function updateStoreFilterOptions() {
+            const filterStore = document.getElementById('filterStore');
+            if (!filterStore) return;
+            const prevVal = filterStore.value;
+            filterStore.innerHTML = '<option value="all">全店舗</option>';
+            stores.forEach(st => {
+                filterStore.innerHTML += `<option value="${st.id}">${st.name}</option>`;
+            });
+            filterStore.value = prevVal;
         }
 
         function updateSummaryData() {
-            const filterStoreId = document.getElementById('filterStore').value;
-            const filterDayId = document.getElementById('filterDay').value;
             const weekData = orders[selectedWeek] || {};
             const days = ['月', '火', '水', '木', '金'];
-            const itemTotals = {};
-            obentoItems.forEach(it => { itemTotals[it.id] = { name: it.name, price: it.price, qty: 0 }; });
-            stores.forEach(st => {
-                if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
-                const stData = weekData[st.id];
-                if (!stData) return;
-                days.forEach(day => {
-                    if (filterDayId !== 'all' && day !== filterDayId) return;
-                    const dayData = stData[day];
-                    if (!dayData) return;
-                    obentoItems.forEach(it => { if (dayData[it.id]) itemTotals[it.id].qty += dayData[it.id]; });
-                });
-            });
+            const filterStoreId = document.getElementById('filterStore').value;
+            const filterDayId = document.getElementById('filterDay').value;
+
             const itemTableBody = document.getElementById('summaryItemTableBody');
             itemTableBody.innerHTML = '';
             let totalMoney = 0;
+
             obentoItems.forEach(it => {
-                const record = itemTotals[it.id];
-                const money = record.qty * record.price;
-                totalMoney += money;
-                itemTableBody.innerHTML += `
-                    <tr class="hover:bg-slate-50/50">
-                        <td class="p-3 pl-5 font-bold text-slate-800">${record.name}</td>
-                        <td class="p-3 text-right text-xs text-slate-400 font-semibold">¥${record.price.toLocaleString()}</td>
-                        <td class="p-3 text-center bg-blue-50/30 text-blue-700 font-bold text-base">${record.qty.toLocaleString()}</td>
-                        <td class="p-3 text-right pr-5 text-slate-800 font-bold">¥${money.toLocaleString()}</td>
-                    </tr>
-                `;
+                let qty = 0, money = 0;
+                stores.forEach(st => {
+                    if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
+                    const stData = weekData[st.id];
+                    if (!stData) return;
+                    days.forEach(day => {
+                        if (filterDayId !== 'all' && day !== filterDayId) return;
+                        const dayData = stData[day];
+                        if (dayData && dayData[it.id]) {
+                            qty += dayData[it.id];
+                            money += dayData[it.id] * it.price;
+                        }
+                    });
+                });
+                if (qty > 0) {
+                    totalMoney += money;
+                    itemTableBody.innerHTML += `
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="p-3 pl-5 font-bold text-slate-800">${it.name}</td>
+                            <td class="p-3 text-right text-xs text-slate-400 font-semibold">¥${it.price.toLocaleString()}</td>
+                            <td class="p-3 text-center bg-blue-50/30 text-blue-700 font-bold text-base">${qty.toLocaleString()}</td>
+                            <td class="p-3 text-right pr-5 text-slate-800 font-bold">¥${money.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
             });
             itemTableBody.innerHTML += `
                 <tr class="bg-slate-50 border-t-2 border-slate-200 font-extrabold text-slate-900">
@@ -900,7 +906,6 @@
                         if (qty === 0 || !it.prodTypes) return;
                         it.prodTypes.forEach(typeKey => {
                             if (aggregated[typeKey]) {
-                                // マスタで設定された個別係数を使用（なければデフォルト、なければ1）
                                 const factor = (it.factors && it.factors[typeKey] !== undefined) ? parseFloat(it.factors[typeKey]) : (PRODUCTION_CONFIG[typeKey].factor || 1);
                                 aggregated[typeKey][dayKey] += qty * factor;
                             }
@@ -912,7 +917,7 @@
             const formatVal = (key, rawVal) => {
                 if (rawVal === 0) return "0";
                 const config = PRODUCTION_CONFIG[key];
-                const calculated = Math.ceil(rawVal); // 各商品ごとの計算時に端数が出る可能性はあるが、ここでは合計を切り上げ
+                const calculated = Math.ceil(rawVal);
                 return `${calculated.toLocaleString()}${config.unit}`;
             };
 
@@ -984,8 +989,12 @@
                         <td class="p-3 text-right font-bold text-slate-700 text-sm">¥${item.price.toLocaleString()}</td>
                         <td class="p-3 text-center">${prodTypeLabel}</td>
                         <td class="p-3 text-center pr-5">
-                            <button onclick="openItemModal(${index})" class="text-blue-600 hover:bg-blue-50 w-8 h-8 rounded-md"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-8 h-8 rounded-md"><i class="fa-solid fa-trash-can"></i></button>
+                            <div class="flex gap-1 justify-center">
+                                <button onclick="moveItem(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
+                                <button onclick="moveItem(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === obentoItems.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === obentoItems.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
+                                <button onclick="openItemModal(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteItemAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -998,13 +1007,232 @@
                     <tr class="hover:bg-slate-50/50">
                         <td class="p-3 pl-5"><div class="text-[10px] text-slate-400 font-bold">${store.id}</div><div class="text-sm font-bold text-slate-800">${store.name}</div></td>
                         <td class="p-3 text-center pr-5">
-                            <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-8 h-8 rounded-md"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-8 h-8 rounded-md"><i class="fa-solid fa-trash-can"></i></button>
+                            <div class="flex gap-1 justify-center">
+                                <button onclick="moveStore(${index}, -1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" title="上に移動" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
+                                <button onclick="moveStore(${index}, 1)" class="text-slate-500 hover:bg-slate-100 w-7 h-7 rounded-md transition-all text-xs ${index === stores.length - 1 ? 'opacity-20 cursor-not-allowed' : ''}" title="下に移動" ${index === stores.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
+                                <button onclick="editStorePrompt(${index})" class="text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md transition-all text-xs ml-1" title="編集"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteStoreAction(${index})" class="text-red-600 hover:bg-red-50 w-7 h-7 rounded-md transition-all text-xs" title="削除"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
                         </td>
                     </tr>
                 `;
             });
         }
+
+        // ==================== 🔄 並び替え機能 ====================
+
+        function moveItem(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= obentoItems.length) return;
+            const temp = obentoItems[index];
+            obentoItems[index] = obentoItems[newIndex];
+            obentoItems[newIndex] = temp;
+            saveDataToStorage();
+            renderMasterTables();
+            renderOrderInputForm();
+            updateSummaryData();
+            updateProductionData();
+            showToast("商品の順番を変更しました。", "success");
+        }
+
+        function moveStore(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= stores.length) return;
+            const temp = stores[index];
+            stores[index] = stores[newIndex];
+            stores[newIndex] = temp;
+            saveDataToStorage();
+            renderMasterTables();
+            renderStoreSelector();
+            updateStoreFilterOptions();
+            showToast("店舗の順番を変更しました。", "success");
+        }
+
+        // ==================== 🖨️ 印刷機能（別ウィンドウ） ====================
+
+        function printSummaryWindow() {
+            const filterDayElement = document.getElementById('filterDay');
+            const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
+            const storeVerticalTotals = new Array(stores.length).fill(0);
+            const printWindow = window.open('', '_blank');
+            
+            let html = `
+            <html>
+            <head>
+                <title>発注一覧</title>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Arial', sans-serif; font-size: 12px; color: #000; margin: 20px; }
+                    h2 { font-size: 18px; margin-bottom: 10px; font-weight: bold; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+                    th { background-color: #4a5568; color: white; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #f0f0f0; }
+                    .total-row { background-color: #d0d0d0; font-weight: bold; }
+                    .product-name { text-align: left; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h2>発注一覧 (${dayLabel})</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="product-name">商品名</th>
+                            <th>合計</th>
+            `;
+            
+            stores.forEach(st => { html += `<th>${st.name}</th>`; });
+            html += `</tr></thead><tbody>`;
+            
+            obentoItems.forEach(it => {
+                let rowTotal = 0;
+                let cols = "";
+                stores.forEach((st, idx) => {
+                    const weekData = orders[selectedWeek] || {};
+                    const q = (weekData[st.id] && weekData[st.id][filterDayElement.value]) ? (weekData[st.id][filterDayElement.value][it.id] || 0) : 0;
+                    rowTotal += q;
+                    storeVerticalTotals[idx] += q;
+                    cols += `<td>${q}</td>`;
+                });
+                html += `<tr><td class="product-name">${it.name}</td><td>${rowTotal}</td>${cols}</tr>`;
+            });
+            
+            html += `<tr class="total-row"><td class="product-name">総合計</td><td>${storeVerticalTotals.reduce((a,b)=>a+b,0)}</td>`;
+            storeVerticalTotals.forEach(t => { html += `<td>${t}</td>`; });
+            html += `</tr></tbody></table>
+            </body>
+            </html>
+            `;
+            
+            printWindow.document.write(html);
+            printWindow.document.close();
+            setTimeout(() => { printWindow.print(); }, 500);
+        }
+
+        function printProductionWindow() {
+            const printWindow = window.open('', '_blank');
+            const weekData = orders[selectedWeek] || {};
+            const days = ['月', '火', '水', '木', '金'];
+            const dayMap = { '月': 'mon', '火': 'tue', '水': 'wed', '木': 'thu', '金': 'fri' };
+            const aggregated = {};
+            Object.keys(PRODUCTION_CONFIG).forEach(key => { aggregated[key] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 }; });
+
+            stores.forEach(st => {
+                const stData = weekData[st.id];
+                if (!stData) return;
+                days.forEach(day => {
+                    const dayData = stData[day];
+                    if (!dayData) return;
+                    const dayKey = dayMap[day];
+                    obentoItems.forEach(it => {
+                        const qty = dayData[it.id] || 0;
+                        if (qty === 0 || !it.prodTypes) return;
+                        it.prodTypes.forEach(typeKey => {
+                            if (aggregated[typeKey]) {
+                                const factor = (it.factors && it.factors[typeKey] !== undefined) ? parseFloat(it.factors[typeKey]) : (PRODUCTION_CONFIG[typeKey].factor || 1);
+                                aggregated[typeKey][dayKey] += qty * factor;
+                            }
+                        });
+                    });
+                });
+            });
+
+            const formatVal = (key, rawVal) => {
+                if (rawVal === 0) return "0";
+                const config = PRODUCTION_CONFIG[key];
+                const calculated = Math.ceil(rawVal);
+                return `${calculated.toLocaleString()}${config.unit}`;
+            };
+
+            let html = `
+            <html>
+            <head>
+                <title>ご飯・材料製造指示書</title>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Arial', sans-serif; font-size: 12px; color: #000; margin: 20px; }
+                    h2 { font-size: 16px; margin-bottom: 15px; font-weight: bold; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                    th, td { border: 1px solid #000; padding: 10px; text-align: center; }
+                    th { background-color: #2d3748; color: white; font-weight: bold; }
+                    .item-name { text-align: left; background-color: #f0f0f0; font-weight: bold; }
+                    .value { font-size: 14px; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h2>【ご飯製造指示書】</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="item-name">項目</th>
+                            <th>月曜日</th>
+                            <th>火曜日</th>
+                            <th>水曜日</th>
+                            <th>木曜日</th>
+                            <th>金曜日</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="item-name">小ライス（個）</td>
+                            <td class="value">${formatVal('rice', aggregated.rice.mon)}</td>
+                            <td class="value">${formatVal('rice', aggregated.rice.tue)}</td>
+                            <td class="value">${formatVal('rice', aggregated.rice.wed)}</td>
+                            <td class="value">${formatVal('rice', aggregated.rice.thu)}</td>
+                            <td class="value">${formatVal('rice', aggregated.rice.fri)}</td>
+                        </tr>
+                        <tr>
+                            <td class="item-name">おにぎり（個）</td>
+                            <td class="value">${formatVal('onigiri', aggregated.onigiri.mon)}</td>
+                            <td class="value">${formatVal('onigiri', aggregated.onigiri.tue)}</td>
+                            <td class="value">${formatVal('onigiri', aggregated.onigiri.wed)}</td>
+                            <td class="value">${formatVal('onigiri', aggregated.onigiri.thu)}</td>
+                            <td class="value">${formatVal('onigiri', aggregated.onigiri.fri)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>【材料集計表】</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="item-name">項目</th>
+                            <th>月曜日</th>
+                            <th>火曜日</th>
+                            <th>水曜日</th>
+                            <th>木曜日</th>
+                            <th>金曜日</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            MATERIAL_ITEMS.forEach(m => {
+                html += `
+                    <tr>
+                        <td class="item-name">${PRODUCTION_CONFIG[m].name}</td>
+                        <td class="value">${formatVal(m, aggregated[m].mon)}</td>
+                        <td class="value">${formatVal(m, aggregated[m].tue)}</td>
+                        <td class="value">${formatVal(m, aggregated[m].wed)}</td>
+                        <td class="value">${formatVal(m, aggregated[m].thu)}</td>
+                        <td class="value">${formatVal(m, aggregated[m].fri)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            </body>
+            </html>
+            `;
+            
+            printWindow.document.write(html);
+            printWindow.document.close();
+            setTimeout(() => { printWindow.print(); }, 500);
+        }
+
+        // ==================== 📝 商品・店舗管理 ====================
 
         function openItemModal(index) {
             const item = obentoItems[index];
@@ -1069,10 +1297,11 @@
             updateSummaryData();
             updateProductionData();
             closeItemModal();
+            showToast("商品情報を更新しました。", "success");
         }
 
         function deleteItemAction(index) {
-            if (confirm("削除しますか？")) { obentoItems.splice(index, 1); saveDataToStorage(); renderMasterTables(); }
+            if (confirm("削除しますか？")) { obentoItems.splice(index, 1); saveDataToStorage(); renderMasterTables(); showToast("商品を削除しました。", "success"); }
         }
 
         function addNewItemPrompt() {
@@ -1081,6 +1310,7 @@
             obentoItems.push({ id: "ITEM" + Date.now().toString().slice(-6), name: name, price: 500, prodTypes: [], factors: {} });
             saveDataToStorage();
             renderMasterTables();
+            showToast("新規商品を追加しました。", "success");
         }
 
         function addNewStorePrompt() {
@@ -1091,25 +1321,26 @@
             renderMasterTables();
             renderStoreSelector();
             updateStoreFilterOptions();
+            showToast("新規店舗を追加しました。", "success");
         }
 
         function editStorePrompt(index) {
             const name = prompt("店舗名:", stores[index].name);
-            if (name) { stores[index].name = name; saveDataToStorage(); renderMasterTables(); renderStoreSelector(); updateStoreFilterOptions(); }
+            if (name) { stores[index].name = name; saveDataToStorage(); renderMasterTables(); renderStoreSelector(); updateStoreFilterOptions(); showToast("店舗情報を更新しました。", "success"); }
         }
 
         function deleteStoreAction(index) {
-            if (confirm("削除しますか？")) { stores.splice(index, 1); saveDataToStorage(); renderMasterTables(); renderStoreSelector(); updateStoreFilterOptions(); }
+            if (confirm("削除しますか？")) { stores.splice(index, 1); saveDataToStorage(); renderMasterTables(); renderStoreSelector(); updateStoreFilterOptions(); showToast("店舗を削除しました。", "success"); }
         }
 
         function changeMasterPasswordPrompt() {
             const p = prompt("新パスワード:", masterPassword);
-            if (p) { masterPassword = p; saveDataToStorage(); }
+            if (p) { masterPassword = p; saveDataToStorage(); showToast("パスワードを変更しました。", "success"); }
         }
 
         function clearAllSystemData() {
             if (confirm("全データを初期化しますか？") && prompt("『初期化』と入力:") === "初期化") {
-                orders = {}; saveDataToStorage(); handleWeekChange();
+                orders = {}; saveDataToStorage(); handleWeekChange(); showToast("全データを初期化しました。", "success");
             }
         }
 
@@ -1124,7 +1355,7 @@
         window.onload = function() {
             const now = new Date();
             const days = ['日', '月', '火', '水', '木', '金', '土'];
-            document.getElementById('currentDateDisplay').innerHTML = `<i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getUTCDay()]})`;
+            document.getElementById('currentDateDisplay').innerHTML = `<i class="fa-solid fa-calendar-days mr-1"></i> ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 (${days[now.getDay()]})`;
             initWeekSelector();
             initFirebaseSync();
         };
@@ -1143,32 +1374,6 @@
                 filterDayElement.innerHTML += `<option value="${day}">${d.getMonth()+1}/${d.getDate()} (${day})</option>`;
             });
             filterDayElement.value = currentVal;
-        }
-
-        function printSummary() {
-            const filterDayElement = document.getElementById('filterDay');
-            const dayLabel = filterDayElement.options[filterDayElement.selectedIndex].text;
-            const storeVerticalTotals = new Array(stores.length).fill(0);
-            const printWindow = window.open('', '_blank');
-            let html = `<html><head><title>発注一覧</title><style>table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:5px;text-align:center;}</style></head><body>`;
-            html += `<h2>発注一覧 (${dayLabel})</h2><table><thead><tr><th>商品名</th><th>合計</th>`;
-            stores.forEach(st => { html += `<th>${st.name}</th>`; });
-            html += `</tr></thead><tbody>`;
-            obentoItems.forEach(it => {
-                let rowTotal = 0;
-                let cols = "";
-                stores.forEach((st, idx) => {
-                    const q = (orders[selectedWeek] && orders[selectedWeek][st.id] && orders[selectedWeek][st.id][filterDayElement.value]) ? (orders[selectedWeek][st.id][filterDayElement.value][it.id] || 0) : 0;
-                    rowTotal += q; storeVerticalTotals[idx] += q; cols += `<td>${q}</td>`;
-                });
-                html += `<tr><td>${it.name}</td><td>${rowTotal}</td>${cols}</tr>`;
-            });
-            html += `<tr><td>総合計</td><td>${storeVerticalTotals.reduce((a,b)=>a+b,0)}</td>`;
-            storeVerticalTotals.forEach(t => { html += `<td>${t}</td>`; });
-            html += `</tr></tbody></table></body></html>`;
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.print();
         }
 
         function exportToCSV() {
