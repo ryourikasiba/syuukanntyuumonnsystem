@@ -693,7 +693,10 @@
                         <span class="text-xs font-bold text-slate-500">現在のステータス:</span>
                         ${getStatusBadgeHTML(currentStoreData.status)}
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="copyPreviousOrder()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-all">
+                            <i class="fa-solid fa-copy"></i> 前回の注文をコピー
+                        </button>
                         <button onclick="saveOrderData(false)" ${isSubmitted ? 'disabled' : ''} class="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 shadow-sm transition-all">
                             <i class="fa-solid fa-floppy-disk"></i> 一時保存(下書き)
                         </button>
@@ -801,6 +804,52 @@
             renderOrderInputForm();
             updateInputStatusStats();
             showToast('修正モードに切り替えました。編集後は再度確定してください。', 'info');
+        }
+
+        function copyPreviousOrder() {
+            // 前の週のデータを探す
+            const weekSelector = document.getElementById('weekSelector');
+            const currentIndex = weekSelector.selectedIndex;
+            
+            if (currentIndex <= 0) {
+                showToast('コピー元となる前の週がありません。', 'error');
+                return;
+            }
+            
+            // 前の週を選択
+            const prevWeekValue = weekSelector.options[currentIndex - 1].value;
+            const prevWeekData = orders[prevWeekValue];
+            
+            if (!prevWeekData || !prevWeekData[selectedStore]) {
+                showToast('前の週に' + stores.find(s => s.id === selectedStore).name + 'の注文データがありません。', 'error');
+                return;
+            }
+            
+            // 現在の週のデータを初期化
+            if (!orders[selectedWeek]) orders[selectedWeek] = {};
+            if (!orders[selectedWeek][selectedStore]) {
+                orders[selectedWeek][selectedStore] = { status: "uninput" };
+            }
+            
+            const currentStoreData = orders[selectedWeek][selectedStore];
+            const prevStoreData = prevWeekData[selectedStore];
+            const days = ['月', '火', '水', '木', '金'];
+            
+            // 前の週のデータをコピー
+            days.forEach(day => {
+                if (!currentStoreData[day]) currentStoreData[day] = {};
+                if (prevStoreData[day]) {
+                    Object.assign(currentStoreData[day], prevStoreData[day]);
+                }
+            });
+            
+            // ステータスをリセット
+            currentStoreData.status = 'saving';
+            
+            saveDataToStorage();
+            renderOrderInputForm();
+            updateInputStatusStats();
+            showToast('前回の注文をコピーしました。必要に応じて編集してください。', 'success');
         }
 
         function handleStoreChange() {
