@@ -157,8 +157,23 @@
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-wrap items-center gap-4">
                 <div class="flex items-center gap-2">
                     <label for="filterStore" class="text-xs font-bold text-slate-500">店舗絞り込み:</label>
-                    <select id="filterStore" onchange="updateSummaryData()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        </select>
+                    <div class="relative inline-block text-left" id="filterStoreDropdown">
+                        <button type="button" onclick="toggleStoreDropdown()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 flex items-center gap-2">
+                            <span id="filterStoreLabel">全店舗</span>
+                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div id="storeDropdownContent" class="hidden absolute left-0 mt-1 w-56 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-2">
+                            <div class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-100 mb-1" onclick="selectAllStores(true)">
+                                <span class="text-xs font-bold text-blue-600">すべて選択</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-100 mb-2" onclick="selectAllStores(false)">
+                                <span class="text-xs font-bold text-slate-400">すべて解除</span>
+                            </div>
+                            <div id="storeCheckboxList" class="space-y-1">
+                                <!-- JSで生成 -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <label for="filterDay" class="text-xs font-bold text-slate-500">曜日絞り込み:</label>
@@ -889,22 +904,67 @@
             document.getElementById('statSubmitted').textContent = submitted;
         }
 
+        function toggleStoreDropdown() {
+            const dropdown = document.getElementById('storeDropdownContent');
+            dropdown.classList.toggle('hidden');
+            
+            // 画面外クリックで閉じる処理
+            if (!dropdown.classList.contains('hidden')) {
+                const closeHandler = (e) => {
+                    if (!document.getElementById('filterStoreDropdown').contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                        document.removeEventListener('click', closeHandler);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closeHandler), 10);
+            }
+        }
+
+        function selectAllStores(checked) {
+            const checkboxes = document.querySelectorAll('.store-filter-checkbox');
+            checkboxes.forEach(cb => cb.checked = checked);
+            updateSummaryData();
+        }
+
         function updateStoreFilterOptions() {
-            const filterStore = document.getElementById('filterStore');
-            if (!filterStore) return;
-            const prevVal = filterStore.value;
-            filterStore.innerHTML = '<option value="all">全店舗</option>';
+            const container = document.getElementById('storeCheckboxList');
+            if (!container) return;
+            
+            // 現在の選択状態を保持
+            const selectedIds = Array.from(document.querySelectorAll('.store-filter-checkbox:checked')).map(cb => cb.value);
+            const isFirstLoad = container.children.length === 0;
+
+            container.innerHTML = '';
             stores.forEach(st => {
-                filterStore.innerHTML += `<option value="${st.id}">${st.name}</option>`;
+                const isChecked = isFirstLoad || selectedIds.includes(st.id);
+                const item = document.createElement('div');
+                item.className = "flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg cursor-pointer";
+                item.innerHTML = `
+                    <input type="checkbox" value="${st.id}" id="filter_st_${st.id}" class="store-filter-checkbox w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" ${isChecked ? 'checked' : ''} onchange="updateSummaryData()">
+                    <label for="filter_st_${st.id}" class="text-xs font-semibold text-slate-700 cursor-pointer flex-1">${st.name}</label>
+                `;
+                container.appendChild(item);
             });
-            filterStore.value = prevVal;
+            
+            updateSummaryData();
         }
 
         function updateSummaryData() {
             const weekData = orders[selectedWeek] || {};
             const days = ['月', '火', '水', '木', '金'];
-            const filterStoreId = document.getElementById('filterStore').value;
             const filterDayId = document.getElementById('filterDay').value;
+            
+            // 選択されている店舗IDを取得
+            const selectedCheckboxes = document.querySelectorAll('.store-filter-checkbox:checked');
+            const selectedStoreIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            
+            // ラベルの更新
+            const label = document.getElementById('filterStoreLabel');
+            if (label) {
+                if (selectedStoreIds.length === 0) label.textContent = "未選択";
+                else if (selectedStoreIds.length === stores.length) label.textContent = "全店舗";
+                else label.textContent = `${selectedStoreIds.length}店舗選択中`;
+            }
 
             const itemTableBody = document.getElementById('summaryItemTableBody');
             itemTableBody.innerHTML = '';
@@ -913,7 +973,7 @@
             obentoItems.forEach(it => {
                 let qty = 0, money = 0;
                 stores.forEach(st => {
-                    if (filterStoreId !== 'all' && st.id !== filterStoreId) return;
+                    if (!selectedStoreIds.includes(st.id)) return;
                     const stData = weekData[st.id];
                     if (!stData) return;
                     days.forEach(day => {
