@@ -526,6 +526,21 @@
             }
         }
 
+        function validateStoreIds() {
+            // 店舗IDの重複を検査し、重複があれば修正
+            const seenIds = new Set();
+            stores.forEach((store, index) => {
+                if (seenIds.has(store.id)) {
+                    console.warn('重複したIDを検出: ' + store.id + ', 新しいIDを割り当てています。');
+                    const timestamp = Date.now().toString().slice(-8);
+                    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                    store.id = "STORE" + timestamp + random;
+                } else {
+                    seenIds.add(store.id);
+                }
+            });
+        }
+
         function initFirebaseSync() {
             try {
                 docRef.onSnapshot((doc) => {
@@ -541,6 +556,8 @@
                         });
 
                         stores = data.stores || stores;
+                        // 店舗IDの重複を検査し修正
+                        validateStoreIds();
                         masterPassword = data.masterPassword || masterPassword;
                         
                         updateStoreFilterOptions();
@@ -1393,7 +1410,25 @@
         function addNewStorePrompt() {
             const name = prompt("店舗名:");
             if (!name) return;
-            stores.push({ id: "STORE" + Date.now().toString().slice(-6), name: name });
+            
+            // ユニークなIDを生成（タイムスタンプ + ランダム値）
+            let newId;
+            let isUnique = false;
+            let attempts = 0;
+            while (!isUnique && attempts < 10) {
+                const timestamp = Date.now().toString().slice(-8);
+                const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                newId = "STORE" + timestamp + random;
+                isUnique = !stores.some(s => s.id === newId);
+                attempts++;
+            }
+            
+            if (!isUnique) {
+                showToast("店舗IDの生成に失敗しました。もう一度お試しください。", "error");
+                return;
+            }
+            
+            stores.push({ id: newId, name: name });
             saveDataToStorage();
             renderMasterTables();
             renderStoreSelector();
